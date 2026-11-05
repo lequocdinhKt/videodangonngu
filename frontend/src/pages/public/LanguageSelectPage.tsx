@@ -1,44 +1,47 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { LANGUAGES, type LanguageCode } from '../../types'
+import { LANGUAGES, UI_COPY, type LanguageCode } from '../../types'
 
 export default function LanguageSelectPage() {
   const navigate = useNavigate()
-  const [selected, setSelected] = useState<LanguageCode>('en-US')
+  const [selected, setSelected] = useState<LanguageCode>('vi-VN')
 
+  useEffect(() => {
+    const saved = localStorage.getItem('preferredLanguage') as LanguageCode | null
+    const change = new URLSearchParams(window.location.search).has('change')
+    if (saved && !change) navigate('/videos', { replace: true })
+    else if (saved) setSelected(saved)
+  }, [navigate])
+
+  const copy = UI_COPY[selected]
   const handleContinue = () => {
     localStorage.setItem('preferredLanguage', selected)
     navigate('/videos')
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6">
-      <h1 className="text-3xl font-bold mb-2">Select Language</h1>
-      <p className="text-gray-400 mb-8">Choose your preferred language</p>
-
-      <div className="w-full max-w-sm space-y-3">
-        {LANGUAGES.map(lang => (
-          <button
-            key={lang.code}
-            onClick={() => setSelected(lang.code)}
-            className={`w-full flex items-center gap-4 p-4 rounded-xl border transition ${
-              selected === lang.code
-                ? 'border-blue-500 bg-blue-500/10'
-                : 'border-gray-700 bg-gray-900 hover:border-gray-500'
-            }`}
-          >
-            <span className="text-2xl">{lang.flag}</span>
-            <span className="text-lg">{lang.label}</span>
-          </button>
-        ))}
-      </div>
-
-      <button
-        onClick={handleContinue}
-        className="mt-8 w-full max-w-sm py-3 bg-blue-600 hover:bg-blue-500 rounded-xl font-semibold transition"
-      >
-        Continue
-      </button>
-    </div>
+    <main className="language-page">
+      <section className="language-panel" aria-labelledby="language-title">
+        <div className="heritage-seal language-seal" aria-hidden>五</div>
+        <p className="eyebrow">DI SẢN · NGŨ HÀNH SƠN</p>
+        <h1 id="language-title">{copy.chooseLanguage}</h1>
+        <p className="lead">{copy.chooseLanguageHint}</p>
+        <div className="language-grid" role="radiogroup" aria-label={copy.chooseLanguage}>
+          {LANGUAGES.map(language => (
+            <button key={language.code} type="button" role="radio" aria-checked={selected === language.code}
+              onClick={() => setSelected(language.code)} className={`language-card ${selected === language.code ? 'is-selected' : ''}`}>
+              <span className="flag" aria-hidden>{language.flag}</span>
+              <span><strong>{language.nativeLabel}</strong><small>{language.code}</small></span>
+              <span className="selection-dot" aria-hidden />
+            </button>
+          ))}
+        </div>
+        <button type="button" className="primary-button wide" onClick={handleContinue}>{copy.continue} <span aria-hidden>→</span></button>
+      </section>
+      <aside className="language-visual" aria-hidden>
+        <div className="visual-orb visual-orb-one" /><div className="visual-orb visual-orb-two" />
+        <div className="visual-card"><span>04</span><strong>languages</strong><div className="visual-line" /><small>Ma nhai · Ngũ Hành Sơn</small></div>
+      </aside>
+    </main>
   )
 }

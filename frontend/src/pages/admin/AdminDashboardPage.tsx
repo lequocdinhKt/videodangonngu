@@ -1,98 +1,127 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api, formatDate, formatDuration } from '../../services/api'
 import type { Video } from '../../types'
 
-const STATUS_COLORS: Record<string, string> = {
-  draft: 'bg-gray-600',
-  processing: 'bg-yellow-600',
-  ready_for_review: 'bg-blue-600',
-  published: 'bg-green-600',
-  failed: 'bg-red-600',
-  requires_review: 'bg-orange-600',
+interface QRData { url: string; qr_image_base64: string; qr_svg_base64: string }
+
+function downloadDataUrl(dataUrl: string, filename: string) {
+  const anchor = document.createElement('a')
+  anchor.href = dataUrl
+  anchor.download = filename
+  anchor.click()
 }
 
 export default function AdminDashboardPage() {
   const navigate = useNavigate()
   const [videos, setVideos] = useState<Video[]>([])
-  const [qr, setQr] = useState<string | null>(null)
+  const [qr, setQr] = useState<QRData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
-  useEffect(() => {
-    if (!localStorage.getItem('token')) { navigate('/admin/login'); return }
-    api.listVideos().then(d => setVideos(d.items)).catch(() => navigate('/admin/login'))
-    api.getQR().then(d => setQr(d.qr_image_base64)).catch(() => {})
+  const load = useCallback(async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const [videoData, qrData] = await Promise.all([api.listVideos(), api.getQR()])
+      setVideos(videoData.items)
+      setQr(qrData)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Không tải được dữ liệu'
+      setError(message)
+      if (/token|credentials|xác thực|unauthorized/i.test(message)) navigate('/admin/login')
+    } finally {
+      setLoading(false)
+    }
   }, [navigate])
 
-  const handlePublish = async (id: string) => {
-    await api.publish(id)
-    setVideos(v => v.map(x => x.id === id ? { ...x, status: 'published' } : x))
+  useEffect(() => {
+    if (!localStorage.getItem('token')) navigate('/admin/login')
+    else void load()
+  }, [load, navigate])
+
+  const changePublishState = async (video: Video) => {
+    setError('')
+    try {
+      if (video.status === 'published') await api.unpublish(video.id)
+      else await api.publish(video.id)
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Không đổi được trạng thái xuất bản')
+    }
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this video?')) return
-    await api.deleteVideo(id)
-    setVideos(v => v.filter(x => x.id !== id))
+    if (!window.confirm('Xóa video nháp này? Thao tác không thể hoàn tác.')) return
+    try {
+      await api.deleteVideo(id)
+      setVideos(items => items.filter(video => video.id !== id))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Xóa video thất bại')
+    }
   }
 
   return (
-    <div className="min-h-screen p-4 max-w-6xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <div className="flex gap-3">
-          <Link to="/admin/videos/new" className="px-4 py-2 bg-blue-600 rounded-lg text-sm font-semibold">+ New Video</Link>
-          <button onClick={() => { localStorage.removeItem('token'); navigate('/admin/login') }} className="px-4 py-2 bg-gray-700 rounded-lg text-sm">Logout</button>
+    <main className="admin-page">
+      <div className="admin-shell">
+        <header className="admin-topbar">
+          <div>
+            <p className="eyebrow" style={{ marginTop: 0 }}>VIDEO GUIDE · ADMIN</p>
+            <h1 className="admin-title">Thư viện nội dung</h1>
+          </div>
+          <div className="admin-actions">
+            <Link to="/videos" className="secondary-button">Xem trang công khai</Link>
+            <Link to="/admin/videos/new" className="primary-button">＋ Thêm video</Link>
+            <button className="secondary-button" onClick={() => { localStorage.removeItem('token'); navigate('/admin/login') }}>Đăng xuất</button>
+          </div>
+        </header>
+        {error && <div className="admin-card danger" role="alert" style={{ marginBottom: 18 }}>{error}</div>}
+        <div className="admin-grid two" style={{ marginBottom: 22 }}>
+          <section className="admin-card">
+            <p className="field-label">TỔNG QUAN</p>
+            <h2 style={{ margin: '10px 0 4px', fontSize: 34 }}>{videos.length}</h2>
+            <p className="muted" style={{ margin: 0 }}>video · {videos.filter(video => video.status === 'published').length} đang xuất bản</p>
+          </section>
+          {qr && (
+            <section className="admin-card qr-card">
+              <img src={qr.qr_image_base64} alt="QR chung mở Video Guide" />
+              <div>
+                <p className="field-label">MÃ QR CHUNG</p>
+                <p className="muted" style={{ margin: '7px 0 12px', overflowWrap: 'anywhere' }}>{qr.url}</p>
+                <div className="admin-actions">
+                  <button className="secondary-button" onClick={() => downloadDataUrl(qr.qr_image_base64, 'video-guide-qr.png')}>Tải PNG</button>
+                  <button className="secondary-button" onClick={() => downloadDataUrl(qr.qr_svg_base64, 'video-guide-qr.svg')}>Tải SVG in ấn</button>
+                </div>
+              </div>
+            </section>
+          )}
         </div>
+        <section className="admin-card">
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <thead><tr><th>Video</th><th>Trạng thái</th><th>Phụ đề</th><th>Thời lượng</th><th>Ngày tạo</th><th>Thao tác</th></tr></thead>
+              <tbody>
+                {videos.map(video => (
+                  <tr key={video.id}>
+                    <td><strong>{video.title || 'Chưa có tiêu đề'}</strong><br /><span className="muted">{video.description?.slice(0, 70)}</span></td>
+                    <td><span className={`status-pill status-${video.status}`}>{video.status.replaceAll('_', ' ')}</span></td>
+                    <td>{video.languages.filter(language => language.status === 'completed').length}/4 đã duyệt</td>
+                    <td>{formatDuration(video.duration_ms)}</td>
+                    <td>{formatDate(video.created_at)}</td>
+                    <td><div className="admin-actions">
+                      <Link to={`/admin/videos/${video.id}`} className="secondary-button">Biên tập</Link>
+                      <button className="secondary-button" onClick={() => void changePublishState(video)}>{video.status === 'published' ? 'Gỡ xuất bản' : 'Xuất bản'}</button>
+                      <button className="secondary-button danger" onClick={() => void handleDelete(video.id)}>Xóa</button>
+                    </div></td>
+                  </tr>
+                ))}
+                {!loading && videos.length === 0 && <tr><td colSpan={6} className="muted" style={{ textAlign: 'center', padding: 34 }}>Chưa có video. Hãy tạo nội dung đầu tiên.</td></tr>}
+                {loading && <tr><td colSpan={6} className="muted" style={{ textAlign: 'center', padding: 34 }}>Đang tải dữ liệu…</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </section>
       </div>
-
-      {qr && (
-        <div className="mb-6 bg-gray-900 p-4 rounded-xl inline-block">
-          <p className="text-sm text-gray-400 mb-2">QR Code for public access</p>
-          <img src={qr} alt="QR Code" className="w-32 h-32" />
-        </div>
-      )}
-
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left text-gray-400 border-b border-gray-800">
-              <th className="p-3">Title</th>
-              <th className="p-3">Status</th>
-              <th className="p-3">Languages</th>
-              <th className="p-3">Duration</th>
-              <th className="p-3">Created</th>
-              <th className="p-3">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {videos.map(v => (
-              <tr key={v.id} className="border-b border-gray-800/50 hover:bg-gray-900/50">
-                <td className="p-3 font-medium">{v.title}</td>
-                <td className="p-3"><span className={`px-2 py-0.5 rounded text-xs ${STATUS_COLORS[v.status]}`}>{v.status}</span></td>
-                <td className="p-3">
-                  <div className="flex gap-1 flex-wrap">
-                    {v.languages.map(l => (
-                      <span key={l.language_code} className={`text-xs px-1.5 py-0.5 rounded ${l.status === 'completed' ? 'bg-green-800' : 'bg-gray-700'}`}>
-                        {l.language_code.split('-')[0]}
-                      </span>
-                    ))}
-                  </div>
-                </td>
-                <td className="p-3">{formatDuration(v.duration_ms)}</td>
-                <td className="p-3">{formatDate(v.created_at)}</td>
-                <td className="p-3">
-                  <div className="flex gap-2 flex-wrap">
-                    <Link to={`/admin/videos/${v.id}`} className="text-blue-400 hover:underline">View</Link>
-                    {(v.status === 'ready_for_review' || v.status === 'draft') && (
-                      <button onClick={() => handlePublish(v.id)} className="text-green-400 hover:underline">Publish</button>
-                    )}
-                    <button onClick={() => handleDelete(v.id)} className="text-red-400 hover:underline">Delete</button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+    </main>
   )
 }

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import uuid
 from datetime import datetime, timezone
 from typing import Any
@@ -18,7 +19,20 @@ from app.models.db import (
     Video,
     VideoLanguage,
     VideoStatus,
+    VideoTranslation,
 )
+
+logger = logging.getLogger(__name__)
+
+
+class RepositoryError(Exception):
+    """Raised when a DB operation did not affect or return the expected row."""
+
+
+def _single_row(resp: Any, *, entity: str, entity_id: str) -> dict[str, Any]:
+    if resp.data:
+        return resp.data[0]
+    raise RepositoryError(f"{entity} returned no rows for id={entity_id}")
 
 
 def _parse_uuid(value: str | uuid.UUID | None) -> uuid.UUID | None:
@@ -73,6 +87,18 @@ def _row_to_language(row: dict[str, Any]) -> VideoLanguage:
         language_code=row["language_code"],
         subtitle_key=row.get("subtitle_key"),
         status=LanguageStatus(row["status"]),
+        created_at=_parse_dt(row.get("created_at")),
+        updated_at=_parse_dt(row.get("updated_at")),
+    )
+
+
+def _row_to_translation(row: dict[str, Any]) -> VideoTranslation:
+    return VideoTranslation(
+        id=_parse_uuid(row["id"]),
+        video_id=_parse_uuid(row["video_id"]),
+        language_code=row["language_code"],
+        title=row["title"],
+        description=row.get("description", ""),
         created_at=_parse_dt(row.get("created_at")),
         updated_at=_parse_dt(row.get("updated_at")),
     )
@@ -185,7 +211,8 @@ class SupabaseRepository:
         video = await self.get_video(video_id)
         if not video:
             return None
-        video.languages = await self.list_video_languages(video_id, with_segments=False, with_audio=True)
+        video.languages = await self.list_video_languages(video_id, with_segments=False)
+        video.translations = await self.list_video_translations(video_id)
         video.jobs = await self.list_jobs(video_id)
         return video
 
@@ -209,8 +236,20 @@ class SupabaseRepository:
         vid = str(video_id)
 
         def _update():
-            resp = self.client.table("videos").update(payload).eq("id", vid).execute()
-            return resp.data[0]
+            resp = (
+                self.client.table("videos")
+                .update(payload)
+                .eq("id", vid)
+                .select("*")
+                .execute()
+            )
+            logger.info(
+                "update_video id=%s fields=%s returned_rows=%d",
+                vid,
+                sorted(payload.keys()),
+                len(resp.data or []),
+            )
+            return _single_row(resp, entity="Video", entity_id=vid)
 
         return _row_to_video(await self._run(_update))
 
@@ -219,6 +258,60 @@ class SupabaseRepository:
             self.client.table("videos").delete().eq("id", str(video_id)).execute()
 
         await self._run(_delete)
+
+    # --- Localized titles and descriptions ---
+
+    async def upsert_video_translation(
+        self,
+        video_id: uuid.UUID,
+        language_code: str,
+        title: str,
+        description: str = "",
+    ) -> VideoTranslation:
+        payload = {
+            "video_id": str(video_id),
+            "language_code": language_code,
+            "title": title,
+            "description": description,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }
+
+        def _upsert():
+            resp = self.client.table("video_translations").upsert(
+                payload, on_conflict="video_id,language_code"
+            ).execute()
+            return resp.data[0]
+
+        return _row_to_translation(await self._run(_upsert))
+
+    async def list_video_translations(self, video_id: uuid.UUID) -> list[VideoTranslation]:
+        def _query():
+            return (
+                self.client.table("video_translations")
+                .select("*")
+                .eq("video_id", str(video_id))
+                .execute()
+                .data
+            )
+
+        return [_row_to_translation(row) for row in await self._run(_query)]
+
+    async def get_video_translation(
+        self, video_id: uuid.UUID, language_code: str
+    ) -> VideoTranslation | None:
+        def _query():
+            resp = (
+                self.client.table("video_translations")
+                .select("*")
+                .eq("video_id", str(video_id))
+                .eq("language_code", language_code)
+                .limit(1)
+                .execute()
+            )
+            return resp.data[0] if resp.data else None
+
+        row = await self._run(_query)
+        return _row_to_translation(row) if row else None
 
     # --- Video languages ---
 
@@ -286,8 +379,14 @@ class SupabaseRepository:
         payload["updated_at"] = datetime.now(timezone.utc).isoformat()
 
         def _update():
-            resp = self.client.table("video_languages").update(payload).eq("id", str(lang_id)).execute()
-            return resp.data[0]
+            resp = (
+                self.client.table("video_languages")
+                .update(payload)
+                .eq("id", str(lang_id))
+                .select("*")
+                .execute()
+            )
+            return _single_row(resp, entity="VideoLanguage", entity_id=str(lang_id))
 
         return _row_to_language(await self._run(_update))
 
@@ -383,11 +482,12 @@ class SupabaseRepository:
                     self.client.table("audio_tracks")
                     .update(payload)
                     .eq("id", str(existing.id))
+                    .select("*")
                     .execute()
                 )
             else:
                 resp = self.client.table("audio_tracks").insert(payload).execute()
-            return resp.data[0]
+            return _single_row(resp, entity="AudioTrack", entity_id=str(existing.id if existing else video_language_id))
 
         return _row_to_audio(await self._run(_upsert))
 
@@ -426,11 +526,14 @@ class SupabaseRepository:
                     self.client.table("processing_jobs")
                     .update(payload)
                     .eq("id", str(existing.id))
+                    .select("*")
                     .execute()
                 )
+                entity_id = str(existing.id)
             else:
                 resp = self.client.table("processing_jobs").insert(payload).execute()
-            return resp.data[0]
+                entity_id = str(video_id)
+            return _single_row(resp, entity="ProcessingJob", entity_id=entity_id)
 
         return _row_to_job(await self._run(_write))
 

@@ -1,338 +1,98 @@
-# Deploy Setup Guide
+# Cài đặt và triển khai
 
-Checklist để deploy **Multilingual Video Localization Platform** lên web.  
-Các bước có dấu `[ ]` là việc **bạn phải tự làm** — agent không thể làm thay (tạo tài khoản, nhập secrets, deploy hosting).
+## 1. Thu hồi khóa cũ
 
----
+Nếu bất kỳ khóa Supabase, R2 hoặc Groq nào từng xuất hiện trong `.env.example` hay Git, hãy revoke/rotate trước khi deploy. File mẫu hiện chỉ chứa placeholder. Không đặt secret vào frontend hoặc biến bắt đầu bằng `VITE_`.
 
-## 1. Prerequisites
+## 2. Supabase
 
-- [ ] Tài khoản [GitHub](https://github.com) (push code)
-- [ ] Tài khoản [Supabase](https://supabase.com) (free tier đủ cho MVP)
-- [ ] Tài khoản hosting backend (chọn một):
-  - **Railway** — dễ, hỗ trợ Docker + Redis
-  - **VPS** (DigitalOcean, Hetzner) — linh hoạt, cần SSH
-- [ ] Tài khoản hosting frontend (chọn một):
-  - Vercel / Netlify / Cloudflare Pages
-- [ ] **FFmpeg** cài trên máy chạy worker (không cài trên Supabase)
-- [ ] **OpenAI API key** (nếu generate thật, không dùng mock)
-- [ ] Domain (optional lúc dev, bắt buộc khi public production)
-- [ ] Python 3.11–3.12 khuyến nghị (tránh 3.14 nếu gặp lỗi package)
+1. Tạo project Free, ưu tiên region Singapore.
+2. Mở SQL Editor, chạy lần lượt:
+   - `supabase/migrations/001_initial_schema.sql`
+   - `supabase/migrations/002_subtitle_only_localization.sql`
+3. Lấy Project URL và `service_role` key cho backend.
+4. Không cần tạo Supabase Storage bucket; media dùng R2.
 
----
+## 3. Cloudflare R2
 
-## 2. Supabase Setup (BẮT BUỘC — làm trước)
+1. Tạo bucket, ví dụ `video-assets`.
+2. Tạo S3 API token giới hạn vào bucket đó.
+3. Ghi lại endpoint, Access Key ID và Secret Access Key.
+4. Cấu hình CORS cho bucket, thay domain Pages thật:
 
-### 2.1 Tạo project
+```json
+[
+  {
+    "AllowedOrigins": ["https://your-site.pages.dev", "http://localhost:5173"],
+    "AllowedMethods": ["GET", "PUT", "HEAD"],
+    "AllowedHeaders": ["Content-Type"],
+    "ExposeHeaders": ["ETag"],
+    "MaxAgeSeconds": 3600
+  }
+]
+```
 
-1. Đăng nhập [supabase.com](https://supabase.com) → **New project**
-2. Chọn organization → đặt tên project (vd: `videodangonngu`)
-3. Chọn **Region** gần user (Singapore cho VN)
-4. Đặt database password → **Save password** (không mất)
-5. Đợi project khởi tạo (~2 phút)
+Media không đưa vào Git. Upload admin ghi vào các object key cố định dưới `video/{id}/`.
 
-### 2.2 Lấy API keys
+## 4. Groq
 
-1. Vào **Project Settings** → **API**
-2. Copy và lưu an toàn:
-   - **Project URL** → `SUPABASE_URL`
-   - **anon public** → `SUPABASE_ANON_KEY`
-   - **service_role** → `SUPABASE_SERVICE_ROLE_KEY` ⚠️ **CHỈ backend, KHÔNG BAO GIỜ đưa vào frontend**
+Tạo API key và đặt `TRANSLATION_PROVIDER=groq`, `GROQ_API_KEY=...`. Đây là tùy chọn: không có key thì vẫn upload bốn SRT thủ công. Khi gặp 429, admin sẽ thấy thông báo thử lại hoặc dùng SRT thủ công.
 
-### 2.3 Chạy database migration
+## 5. Render Free cho FastAPI
 
-1. Vào **SQL Editor** → **New query**
-2. Copy toàn bộ nội dung file [`supabase/migrations/001_initial_schema.sql`](../supabase/migrations/001_initial_schema.sql)
-3. Click **Run**
-4. Kiểm tra **Table Editor** — phải có: `users`, `videos`, `video_languages`, `subtitle_segments`, `audio_tracks`, `processing_jobs`
+Repository đã có `render.yaml` và Dockerfile. Trong Render:
 
-### 2.4 Tạo Storage bucket
+1. New → Blueprint, chọn repository.
+2. Điền các biến `sync: false` theo `.env.example`.
+3. Đặt thêm:
+   - `PUBLIC_BASE_URL=https://your-site.pages.dev`
+   - `CORS_ORIGINS=https://your-site.pages.dev,http://localhost:5173`
+   - `STORAGE_PROVIDER=r2`
+4. Deploy và kiểm tra `https://your-api.onrender.com/api/health`.
 
-1. Vào **Storage** → **New bucket**
-2. Name: `video-assets`
-3. **Public bucket: OFF** (private)
-4. Create bucket
+Render Free có thể ngủ sau thời gian không hoạt động; frontend đã có trạng thái “Máy chủ đang khởi động” và nút thử lại.
 
-> Backend dùng service role + signed URLs — không cần public bucket.
+## 6. Cloudflare Pages cho frontend
 
-### 2.5 Điền `.env` backend
+1. Workers & Pages → Create → Pages → kết nối repository.
+2. Root directory: `frontend`.
+3. Build command: `npm run build`.
+4. Output directory: `dist`.
+5. Environment variable: `VITE_API_URL=https://your-api.onrender.com`.
+6. Deploy. File `public/_redirects` đã cấu hình fallback cho React Router.
 
-Copy `.env.example` → `backend/.env`:
+Sau khi có URL Pages cuối cùng, cập nhật `PUBLIC_BASE_URL` và `CORS_ORIGINS` trên Render rồi redeploy. QR sinh từ `PUBLIC_BASE_URL`; URL gốc Pages vẫn dùng được nếu sau này thêm domain riêng.
+
+## 7. Cấu hình bắt buộc của backend
 
 ```env
-SUPABASE_URL=https://xxxxx.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=eyJ...
-SUPABASE_ANON_KEY=eyJ...
-SUPABASE_STORAGE_BUCKET=video-assets
-STORAGE_PROVIDER=supabase
-SKIP_SUPABASE_VALIDATION=false
-
-JWT_SECRET=<random-64-chars>
-ADMIN_EMAIL=your@email.com
-ADMIN_PASSWORD=<strong-password>
-OPENAI_API_KEY=sk-...
-
-PUBLIC_BASE_URL=https://your-domain.com
-CORS_ORIGINS=https://your-domain.com
 ENV=production
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=...
+STORAGE_PROVIDER=r2
+S3_BUCKET=video-assets
+S3_ENDPOINT=https://ACCOUNT_ID.r2.cloudflarestorage.com
+S3_ACCESS_KEY=...
+S3_SECRET_KEY=...
+SIGNED_URL_EXPIRES_SECONDS=7200
+JWT_SECRET=<chuỗi ngẫu nhiên dài>
+ADMIN_EMAIL=<email thật>
+ADMIN_PASSWORD=<mật khẩu mạnh>
+GROQ_API_KEY=<tùy chọn>
+PUBLIC_BASE_URL=https://your-site.pages.dev
+CORS_ORIGINS=https://your-site.pages.dev,http://localhost:5173
 ```
 
-- [ ] Đã tạo Supabase project
-- [ ] Đã chạy SQL migration
-- [ ] Đã tạo bucket `video-assets` (private)
-- [ ] Đã điền `backend/.env`
+Production sẽ từ chối khởi động nếu còn JWT hoặc mật khẩu placeholder.
 
----
+## 8. Kiểm tra nghiệm thu
 
-## 3. Local Development
+1. Admin đăng nhập và tạo video mới.
+2. Upload MP4, thumbnail và SRT Việt.
+3. Tạo bản dịch nháp hoặc upload SRT EN/RU/ZH.
+4. Sửa ít nhất một cue, lưu và duyệt đủ bốn ngôn ngữ.
+5. Publish, tải QR PNG/SVG và quét bằng Android/iPhone.
+6. Kiểm tra đổi ngôn ngữ, bật/tắt/đổi phụ đề, toàn màn hình và tải lại sau khi signed URL hết hạn.
+7. Thử file sai định dạng, video quá dung lượng và trạng thái Groq rate-limit.
 
-```bash
-# Không cần Docker PostgreSQL
-
-cd backend
-python -m venv .venv
-.venv\Scripts\activate          # Windows
-pip install -r requirements.txt
-copy ..\.env.example .env       # rồi điền Supabase keys
-uvicorn app.main:app --reload --port 8000
-
-# Terminal mới — frontend
-cd frontend
-npm install
-npm run dev
-```
-
-URLs:
-- Frontend: http://localhost:5173
-- API: http://localhost:8000/api/health
-- Admin: http://localhost:5173/admin/login
-
-### Chạy tests (không cần Supabase thật)
-
-```bash
-cd backend
-pytest tests/ -m "not integration and not supabase_integration" -v
-```
-
-### E2E mock pipeline (cần FFmpeg)
-
-```bash
-set E2E_MOCK_TRANSLATION=1
-python -m tests.run_e2e_pipeline
-```
-
----
-
-## 4. Deploy Option A — Railway
-
-### 4.1 Chuẩn bị
-
-- [ ] Push code lên GitHub
-- [ ] Tài khoản [railway.app](https://railway.app)
-
-### 4.2 Services
-
-Tạo project Railway với 3 services:
-
-| Service | Image/Build | Port |
-|---------|-------------|------|
-| `api` | Dockerfile `backend/Dockerfile`, CMD api | 8000 |
-| `worker` | Same Dockerfile, CMD worker | — |
-| `redis` | Railway Redis template | 6379 |
-
-### 4.3 Environment variables (cả api + worker)
-
-| Variable | Value |
-|----------|-------|
-| `SUPABASE_URL` | từ Supabase |
-| `SUPABASE_SERVICE_ROLE_KEY` | từ Supabase |
-| `SUPABASE_ANON_KEY` | từ Supabase |
-| `SUPABASE_STORAGE_BUCKET` | `video-assets` |
-| `STORAGE_PROVIDER` | `supabase` |
-| `REDIS_URL` | Railway Redis URL |
-| `USE_ARQ` | `true` |
-| `JWT_SECRET` | random strong secret |
-| `ADMIN_EMAIL` | email admin |
-| `ADMIN_PASSWORD` | password mạnh |
-| `OPENAI_API_KEY` | sk-... |
-| `ENV` | `production` |
-| `PUBLIC_BASE_URL` | https://your-frontend-domain.com |
-| `CORS_ORIGINS` | https://your-frontend-domain.com |
-| `FFMPEG_PATH` | `ffmpeg` |
-
-- [ ] API service deployed
-- [ ] Worker service deployed (có FFmpeg trong Docker image)
-- [ ] Redis connected
-
-### 4.4 Frontend trên Railway (optional)
-
-Hoặc deploy frontend riêng trên Vercel (khuyến nghị section 6).
-
----
-
-## 5. Deploy Option B — VPS (Ubuntu 22.04)
-
-### 5.1 Server setup
-
-```bash
-# SSH vào VPS
-sudo apt update && sudo apt upgrade -y
-sudo apt install -y docker.io docker-compose-plugin nginx certbot python3-certbot-nginx
-sudo usermod -aG docker $USER
-```
-
-### 5.2 Clone & configure
-
-```bash
-git clone <your-repo> /opt/videodangonngu
-cd /opt/videodangonngu
-cp .env.example backend/.env
-# Edit backend/.env với Supabase keys + production settings
-```
-
-### 5.3 Start services
-
-```bash
-docker compose -f docker-compose.prod.yml up -d --build
-```
-
-Services: `api`, `worker`, `redis`
-
-### 5.4 Nginx reverse proxy
-
-```nginx
-# /etc/nginx/sites-available/videodangonngu
-server {
-    listen 80;
-    server_name your-domain.com;
-
-    location /api {
-        proxy_pass http://127.0.0.1:8000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        client_max_body_size 500M;
-    }
-
-    location / {
-        root /var/www/videodangonngu/frontend/dist;
-        try_files $uri $uri/ /index.html;
-    }
-}
-```
-
-```bash
-sudo ln -s /etc/nginx/sites-available/videodangonngu /etc/nginx/sites-enabled/
-sudo certbot --nginx -d your-domain.com
-sudo nginx -t && sudo systemctl reload nginx
-```
-
-- [ ] VPS provisioned
-- [ ] Docker compose running
-- [ ] Nginx + HTTPS configured
-- [ ] Frontend built: `cd frontend && npm run build`
-
----
-
-## 6. Deploy Frontend (Vercel / Netlify)
-
-1. Connect GitHub repo
-2. Root directory: `frontend`
-3. Build command: `npm run build`
-4. Output: `dist`
-5. **Environment variables:** KHÔNG thêm Supabase service role key
-6. Rewrites/proxy `/api` → backend URL:
-
-**Vercel** (`vercel.json`):
-```json
-{
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "https://your-api.railway.app/api/$1" }
-  ]
-}
-```
-
-- [ ] Frontend deployed
-- [ ] `/api` proxy hoạt động
-- [ ] `PUBLIC_BASE_URL` trỏ đúng domain frontend
-
----
-
-## 7. Post-Deploy Verification
-
-- [ ] `GET https://your-api/api/health` → `{"status":"ok","ffmpeg":true}`
-- [ ] Admin login với email/password đã set
-- [ ] **Đổi admin password** ngay sau lần login đầu (hoặc đổi `ADMIN_PASSWORD` trước deploy)
-- [ ] Upload MP4 + SRT + voice → Generate → thành công
-- [ ] Publish video
-- [ ] Public URL: video playable, subtitle/audio switch hoạt động
-- [ ] Unpublished video → 404
-- [ ] QR code trỏ đúng `PUBLIC_BASE_URL`
-
----
-
-## 8. Secrets Checklist
-
-| Secret | Backend | Frontend | Ghi chú |
-|--------|---------|----------|---------|
-| `SUPABASE_SERVICE_ROLE_KEY` | ✅ | ❌ NEVER | Full DB + Storage access |
-| `SUPABASE_ANON_KEY` | ✅ optional | ❌ | Không cần nếu frontend chỉ gọi FastAPI |
-| `OPENAI_API_KEY` | ✅ | ❌ | |
-| `JWT_SECRET` | ✅ | ❌ | |
-| `ADMIN_PASSWORD` | ✅ env | ❌ | Seed lúc startup |
-
-**Không bao giờ** prefix `VITE_` cho service role key.
-
----
-
-## 9. Chi phí ước tính (MVP)
-
-| Service | Free tier | Khi scale |
-|---------|-----------|-----------|
-| Supabase | 500MB DB, 1GB storage | Pro ~$25/tháng |
-| Railway | $5 credit/tháng | ~$10–30/tháng |
-| Vercel | Free static hosting | Pro nếu cần |
-| OpenAI | Pay per use | ~$0.01–0.10/video tùy độ dài |
-| Domain | ~$10/năm | |
-
----
-
-## 10. Troubleshooting
-
-| Lỗi | Nguyên nhân | Fix |
-|-----|-------------|-----|
-| `Missing required Supabase configuration` | Thiếu env | Điền `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` |
-| `ffmpeg: false` trong health | FFmpeg chưa cài | Cài FFmpeg trên worker/host |
-| Generate fail OpenAI | Thiếu key | Set `OPENAI_API_KEY` hoặc `E2E_MOCK_TRANSLATION=1` |
-| Video 404 khi xem | Chưa publish | Admin → Publish |
-| Signed URL expired | Xem quá lâu | Refresh page (API tạo URL mới) |
-| CORS error | Sai origin | Set `CORS_ORIGINS` đúng domain frontend |
-
----
-
-## 11. Schema changes sau này
-
-1. Tạo file mới: `supabase/migrations/002_description.sql`
-2. Chạy trong Supabase SQL Editor
-3. Cập nhật `backend/app/models/db.py` và repository nếu cần
-4. **Không** dùng Alembic — Supabase SQL migrations là source of truth
-
----
-
-## 12. Architecture tóm tắt
-
-```
-User → Frontend (static) → FastAPI API
-                              ├── Supabase Database
-                              ├── Supabase Storage (private bucket)
-                              └── Redis → ARQ Worker (FFmpeg + pipeline)
-```
-
-Pipeline stages: PARSE → TRANSLATE → VALIDATE → TTS → ALIGN → MIX → SUBTITLE_EXPORT → FINALIZE
-
-Media layout trong bucket `video-assets`:
-```
-video/{id}/original.mp4
-video/{id}/thumbnail.jpg
-video/{id}/subtitle/{vi,en,ru,zh}.vtt
-video/{id}/audio/{vi,en,ru,zh}.mp3
-```
+Lưu ý: Render/R2/Supabase/Groq cần tài khoản và secret của chủ dự án nên không thể triển khai công khai chỉ bằng source code local.

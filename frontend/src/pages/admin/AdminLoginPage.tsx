@@ -1,33 +1,50 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../../services/api'
 
 export default function AdminLoginPage() {
   const navigate = useNavigate()
-  const [email, setEmail] = useState('admin@example.com')
-  const [password, setPassword] = useState('admin123')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    setLoading(true)
+    setError('')
     try {
       const { access_token } = await api.login(email, password)
       localStorage.setItem('token', access_token)
       navigate('/admin')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed')
+      setError(err instanceof Error ? err.message : 'Đăng nhập thất bại')
+    } finally {
+      setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <form onSubmit={handleSubmit} className="w-full max-w-sm bg-gray-900 p-6 rounded-xl space-y-4">
-        <h1 className="text-xl font-bold">Admin Login</h1>
-        {error && <p className="text-red-400 text-sm">{error}</p>}
-        <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" className="w-full bg-gray-800 px-3 py-2 rounded" required />
-        <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" className="w-full bg-gray-800 px-3 py-2 rounded" required />
-        <button type="submit" className="w-full py-2 bg-blue-600 hover:bg-blue-500 rounded font-semibold">Login</button>
+    <main className="admin-page" style={{ display: 'grid', placeItems: 'center' }}>
+      <form onSubmit={handleSubmit} className="admin-card" style={{ width: 'min(420px, 100%)' }}>
+        <div className="brand-mark">VG</div>
+        <p className="eyebrow">VIDEO GUIDE · ADMIN</p>
+        <h1 className="admin-title">Đăng nhập quản trị</h1>
+        <p className="muted">Quản lý video, nội dung đa ngôn ngữ và phụ đề.</p>
+        <div className="admin-grid" style={{ marginTop: 26 }}>
+          <div className="field">
+            <label htmlFor="admin-email">Email</label>
+            <input id="admin-email" type="email" autoComplete="username" value={email} onChange={event => setEmail(event.target.value)} required />
+          </div>
+          <div className="field">
+            <label htmlFor="admin-password">Mật khẩu</label>
+            <input id="admin-password" type="password" autoComplete="current-password" value={password} onChange={event => setPassword(event.target.value)} required />
+          </div>
+          {error && <p className="danger" role="alert">{error}</p>}
+          <button className="primary-button wide" type="submit" disabled={loading}>{loading ? 'Đang đăng nhập…' : 'Đăng nhập'}</button>
+          <Link to="/" className="muted" style={{ textAlign: 'center', fontSize: 13 }}>← Về trang người xem</Link>
+        </div>
       </form>
-    </div>
+    </main>
   )
 }

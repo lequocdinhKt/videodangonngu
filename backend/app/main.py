@@ -16,6 +16,7 @@ async def lifespan(app: FastAPI):
     setup_logging()
     settings = get_settings()
     settings.validate_production_config()
+    settings.validate_storage_config()
     repo = get_repository()
     await ensure_admin_user(repo)
     yield
@@ -42,6 +43,9 @@ def create_app() -> FastAPI:
         return {
             "status": "ok",
             "ffmpeg": ffmpeg.is_available(),
+            "storage_provider": settings.storage_provider,
+            "translation_provider": settings.translation_provider,
+            "groq_model": settings.groq_model,
         }
 
     return app

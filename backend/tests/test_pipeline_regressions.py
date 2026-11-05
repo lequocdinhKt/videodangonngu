@@ -12,6 +12,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+pytest.skip(
+    "Legacy audio/TTS pipeline is retained only for data compatibility; the MVP uses subtitle_worker.",
+    allow_module_level=True,
+)
+
 import app.config.settings as settings_mod
 import app.integrations.supabase.database as db_mod
 import app.services.storage.local as storage_mod

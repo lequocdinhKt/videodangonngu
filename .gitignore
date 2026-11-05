@@ -6,7 +6,12 @@ __pycache__/
 .pytest_cache/
 .venv/
 venv/
-storage/
+/storage/
+/backend/storage/
+/backend/test_storage/
+/backend/workspace/
+/demo_assets/
+/frontend/public/demo/
 *.egg-info/
 .DS_Store
 frontend/dist/

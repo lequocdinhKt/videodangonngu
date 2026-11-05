@@ -2,6 +2,7 @@ import asyncio
 import json
 import re
 import uuid
+from collections.abc import Awaitable, Callable
 from pathlib import Path
 
 from app.config.logging import get_logger
@@ -21,13 +22,18 @@ from app.services.storage.local import get_storage
 from app.services.subtitle.parser import parse_srt, segments_to_vtt
 from app.services.subtitle.validator import validate_translation
 from app.services.translation.base import SegmentInput, SegmentOutput, TranslationContext
-from app.services.translation.openai_provider import get_translation_provider
+from app.services.translation.factory import get_translation_provider
 from app.services.tts.cache import TTSCache
 from app.services.tts.edge_tts_engine import get_tts_engine, get_voice_for_language
 
 logger = get_logger(__name__)
 
 _active_tasks: dict[str, asyncio.Task] = {}
+
+
+def is_pipeline_active(video_id: str) -> bool:
+    task = _active_tasks.get(video_id)
+    return task is not None and not task.done()
 
 TRANSLATION_BATCH_SIZE = 12
 TRANSLATION_CONTEXT_OVERLAP = 3
@@ -132,9 +138,13 @@ async def _translate_segments(
     vi_segments: list,
     *,
     concise: bool = False,
+    on_batch: Callable[[int, int], Awaitable[None]] | None = None,
 ) -> list[SegmentOutput]:
     all_translated: list[SegmentOutput] = []
-    for i in range(0, len(vi_segments), TRANSLATION_BATCH_SIZE):
+    total = len(vi_segments)
+    for i in range(0, total, TRANSLATION_BATCH_SIZE):
+        if on_batch:
+            await on_batch(i, total)
         batch = vi_segments[i:i + TRANSLATION_BATCH_SIZE]
         context = _build_translation_context(
             video, lang_code, vi_segments, i, i + len(batch), concise=concise,
@@ -177,6 +187,12 @@ async def run_pipeline(video_id: str, language_codes: list[str] | None = None) -
     existing_flags = await _load_existing_quality_flags(vid) if is_regenerate else []
     await repo.update_video(vid, status=VideoStatus.PROCESSING)
 
+    if not is_regenerate:
+        await repo.upsert_job(
+            vid, pipeline_run_id, ProcessingStage.PARSE.value, None,
+            JobStatus.RUNNING, 5,
+        )
+
     quality_flags: list[str] = []
 
     try:
@@ -215,7 +231,7 @@ async def run_pipeline(video_id: str, language_codes: list[str] | None = None) -
             ])
             await repo.upsert_job(
                 vid, pipeline_run_id, ProcessingStage.PARSE.value, None,
-                JobStatus.COMPLETED, 100,
+                JobStatus.COMPLETED, 18,
             )
             srt_end_ms = subtitles[-1].end_ms if subtitles else 0
 
@@ -281,7 +297,16 @@ async def _process_language(
     if not vi_segments:
         raise RuntimeError(f"No Vietnamese segments available for translating {lang_code}")
 
-    all_translated = await _translate_segments(translator, video, lang_code, vi_segments)
+    async def _on_translate_batch(batch_start: int, total: int) -> None:
+        pct = base_progress + int((batch_start / max(total, 1)) * 8)
+        await repo.upsert_job(
+            vid, pipeline_run_id, ProcessingStage.TRANSLATE.value, lang_code,
+            JobStatus.RUNNING, pct,
+        )
+
+    all_translated = await _translate_segments(
+        translator, video, lang_code, vi_segments, on_batch=_on_translate_batch,
+    )
 
     source_dicts = [
         {"sequence": s.sequence, "start_ms": s.start_ms, "end_ms": s.end_ms, "source_text": s.source_text}
@@ -344,7 +369,14 @@ async def _process_language(
         JobStatus.RUNNING, base_progress + 15,
     )
 
-    for t in all_translated:
+    total_segments = len(all_translated)
+    for seg_idx, t in enumerate(all_translated):
+        if seg_idx == 0 or seg_idx == total_segments - 1 or seg_idx % 5 == 0:
+            pct = base_progress + 15 + int((seg_idx / max(total_segments, 1)) * 10)
+            await repo.upsert_job(
+                vid, pipeline_run_id, ProcessingStage.TTS.value, lang_code,
+                JobStatus.RUNNING, pct,
+            )
         raw_path = workspace / f"{t.sequence:05d}_raw.mp3"
         final_path = workspace / f"{t.sequence:05d}_final.mp3"
         cached = cache.get_cached(tts.provider_name, lang_code, voice, t.translated_text)
@@ -547,13 +579,11 @@ async def _export_subtitles(
 
 
 def start_pipeline(video_id: str, language_codes: list[str] | None = None) -> None:
-    if video_id in _active_tasks and not _active_tasks[video_id].done():
+    if is_pipeline_active(video_id):
         return
 
     settings = get_settings()
     if settings.use_arq:
-        import asyncio
-
         async def _enqueue() -> None:
             from arq import create_pool
             from app.workers.arq_worker import WorkerSettings

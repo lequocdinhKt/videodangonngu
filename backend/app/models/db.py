@@ -21,6 +21,7 @@ class VideoStatus(str, enum.Enum):
 class LanguageStatus(str, enum.Enum):
     PENDING = "pending"
     PROCESSING = "processing"
+    READY_FOR_REVIEW = "ready_for_review"
     COMPLETED = "completed"
     FAILED = "failed"
 
@@ -70,6 +71,7 @@ class Video:
     created_at: datetime | None = None
     updated_at: datetime | None = None
     languages: list[VideoLanguage] = field(default_factory=list)
+    translations: list[VideoTranslation] = field(default_factory=list)
     jobs: list[ProcessingJob] = field(default_factory=list)
 
 
@@ -84,6 +86,17 @@ class VideoLanguage:
     updated_at: datetime | None = None
     segments: list[SubtitleSegment] = field(default_factory=list)
     audio_track: AudioTrack | None = None
+
+
+@dataclass
+class VideoTranslation:
+    id: uuid.UUID
+    video_id: uuid.UUID
+    language_code: str
+    title: str
+    description: str = ""
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
 
 
 @dataclass

@@ -1,66 +1,49 @@
-# Multilingual Video Localization Platform
+# Video Guide
 
-A web platform for multilingual video localization with independent subtitle and audio tracks.
+Website xem video văn hóa/du lịch Việt Nam qua một mã QR chung. Người xem không cần tài khoản: chọn tiếng Việt, Anh, Nga hoặc Trung giản thể rồi xem video với tiêu đề, mô tả và phụ đề tương ứng. Âm thanh luôn là âm thanh gốc tiếng Việt; dự án không tạo hoặc chọn thuyết minh.
 
-## Quick Start
+## Chức năng chính
 
-### Prerequisites
-- Python 3.11+
-- Node.js 20+
-- FFmpeg
-- [Supabase](https://supabase.com) project (database + storage)
+- Giao diện sáng, mobile-first; lần đầu chọn ngôn ngữ và lưu bằng `localStorage`.
+- Danh sách video dạng thẻ và trình phát 16:9 có bật/tắt, đổi phụ đề và toàn màn hình.
+- Admin tạo nháp, nhập nội dung bốn ngôn ngữ, tải MP4/thumbnail/SRT, sửa từng cue, duyệt và xuất bản.
+- Groq chỉ tạo bản dịch phụ đề nháp. Upload SRT thủ công luôn sử dụng được.
+- QR chung chứa URL website, có bản PNG và SVG.
+- Supabase lưu dữ liệu, Cloudflare R2 lưu media, Cloudflare Pages chạy frontend, Render chạy FastAPI.
 
-See **[SETUP_DEPLOY.md](SETUP_DEPLOY.md)** for full Supabase setup, deploy Railway/VPS, and production checklist.
+## Chạy local
 
-### Setup
+```powershell
+Copy-Item .env.example backend/.env
+# Điền Supabase và tài khoản admin trong backend/.env
 
-```bash
-# 1. Configure Supabase (see SETUP_DEPLOY.md section 2)
-#    - Run supabase/migrations/001_initial_schema.sql
-#    - Create private bucket: video-assets
-
-# 2. Backend
 cd backend
 python -m venv .venv
-.venv\Scripts\activate        # Windows
+.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-copy ..\.env.example .env     # Add SUPABASE_* keys
 uvicorn app.main:app --reload --port 8000
 
-# 3. Frontend (new terminal)
+# terminal khác
 cd frontend
+Copy-Item .env.example .env
 npm install
 npm run dev
-
-# 4. Optional: Redis for ARQ worker
-docker compose up -d redis
 ```
 
-### Default Admin
-- Email: `admin@example.com` (or `ADMIN_EMAIL` in `.env`)
-- Password: `admin123` (change in production!)
-
-### URLs
-- Public: http://localhost:5173
+- Người xem: http://localhost:5173
 - Admin: http://localhost:5173/admin/login
-- API: http://localhost:8000/api/health
+- API health: http://localhost:8000/api/health
 
-### Tests
+Không có mật khẩu admin mặc định dùng được. Hãy đặt `ADMIN_EMAIL`, `ADMIN_PASSWORD` và `JWT_SECRET` trong `backend/.env`.
 
-```bash
-cd backend
-pytest tests/ -m "not integration" -v
+## Kiểm thử
+
+```powershell
+cd frontend
+npm run build
+
+cd ..\backend
+pytest -q
 ```
 
-## Architecture
-
-See [PROJECT_ARCHITECTURE.md](PROJECT_ARCHITECTURE.md) for system design.  
-See [SETUP_DEPLOY.md](SETUP_DEPLOY.md) for deploy guide.
-
-## Workflow
-
-1. Admin uploads MP4 + Vietnamese SRT + voice MP3
-2. Click **Generate** — system translates, generates TTS, aligns audio
-3. Review in admin dashboard
-4. **Publish** when ready
-5. Users scan QR → select language → watch with independent subtitle/audio
+Xem [SETUP_DEPLOY.md](SETUP_DEPLOY.md) để cấu hình Supabase, R2, Render, Pages và CORS.

@@ -28,6 +28,7 @@ class InMemoryRepository:
     self.segments: dict[uuid.UUID, dict] = {}
     self.audio: dict[uuid.UUID, dict] = {}
     self.jobs: dict[uuid.UUID, dict] = {}
+    self.translations: dict[tuple[uuid.UUID, str], dict] = {}
 
   async def get_user_by_email(self, email: str) -> User | None:
     for row in self.users.values():
@@ -75,7 +76,8 @@ class InMemoryRepository:
     v = await self.get_video(video_id)
     if not v:
       return None
-    v.languages = await self.list_video_languages(video_id, with_audio=True)
+    v.languages = await self.list_video_languages(video_id)
+    v.translations = await self.list_video_translations(video_id)
     v.jobs = await self.list_jobs(video_id)
     return v
 
@@ -96,6 +98,23 @@ class InMemoryRepository:
 
   async def delete_video(self, video_id: uuid.UUID) -> None:
     self.videos.pop(video_id, None)
+
+  async def upsert_video_translation(self, video_id, language_code, title, description=""):
+    from app.models.db import VideoTranslation
+    key = (video_id, language_code)
+    row = self.translations.get(key, {"id": uuid.uuid4(), "video_id": video_id, "language_code": language_code})
+    row.update({"title": title, "description": description})
+    self.translations[key] = row
+    return VideoTranslation(**row)
+
+  async def list_video_translations(self, video_id):
+    from app.models.db import VideoTranslation
+    return [VideoTranslation(**row) for (vid, _), row in self.translations.items() if vid == video_id]
+
+  async def get_video_translation(self, video_id, language_code):
+    from app.models.db import VideoTranslation
+    row = self.translations.get((video_id, language_code))
+    return VideoTranslation(**row) if row else None
 
   async def create_video_language(self, video_id: uuid.UUID, language_code: str, status: LanguageStatus = LanguageStatus.PENDING) -> VideoLanguage:
     lid = uuid.uuid4()

@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -29,14 +29,25 @@ def create_access_token(subject: str) -> str:
     return jwt.encode({"sub": subject, "exp": expire}, settings.jwt_secret, algorithm="HS256")
 
 
+def _token_from_request(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None,
+) -> str | None:
+    if credentials is not None:
+        return credentials.credentials
+    return request.query_params.get("token")
+
+
 async def get_current_user(
+    request: Request,
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(security)],
     repo: Annotated[SupabaseRepository, Depends(get_repo)],
 ) -> User:
-    if credentials is None:
+    token = _token_from_request(request, credentials)
+    if token is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
     try:
-        payload = jwt.decode(credentials.credentials, get_settings().jwt_secret, algorithms=["HS256"])
+        payload = jwt.decode(token, get_settings().jwt_secret, algorithms=["HS256"])
         email = payload.get("sub")
         if not email:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
