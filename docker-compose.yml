@@ -6,3 +6,9 @@ services:
       - "${API_PORT:-8000}:8000"
     volumes:
       - ./backend/storage:/app/storage
+  web:
+    build: ./frontend
+    ports:
+      - "${WEB_PORT:-5173}:80"
+    depends_on:
+      - api

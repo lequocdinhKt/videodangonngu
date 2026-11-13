@@ -15,8 +15,9 @@ interface DemoManifestItem {
   slug: string
   video: string
   preview_video?: string
+  duration_ms?: number
   thumbnail: string
-  subtitles: Record<LanguageCode, string>
+  subtitles: Partial<Record<LanguageCode, string>>
   translations: VideoTranslation[]
 }
 
@@ -37,10 +38,10 @@ async function loadDemoVideos(language: LanguageCode): Promise<Video[]> {
       title: localized.title,
       description: localized.description,
       status: 'published',
-      duration_ms: 10_000,
+      duration_ms: item.duration_ms || 10_000,
       thumbnail_url: `/demo/${item.thumbnail}`,
       video_url: `/demo/${item.preview_video || item.video}`,
-      languages: LANGUAGES.map(definition => ({
+      languages: LANGUAGES.filter(definition => item.subtitles[definition.code]).map(definition => ({
         language_code: definition.code,
         subtitle_url: `/demo/${item.subtitles[definition.code]}`,
         status: 'completed',

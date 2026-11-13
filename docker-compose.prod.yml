@@ -9,3 +9,12 @@ services:
     env_file:
       - ./backend/.env
     restart: unless-stopped
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "${WEB_PORT:-5173}:80"
+    depends_on:
+      - api
+    restart: unless-stopped

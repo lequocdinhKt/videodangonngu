@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import PublicHeader from '../../components/public/PublicHeader'
-import { HERITAGE_CHAPTERS, HERITAGE_COPY, localizeHeritageVideo } from '../../content/heritageContent'
+import { HERITAGE_CHAPTERS, HERITAGE_COPY, PROJECT_INTRO, localizeHeritageVideo } from '../../content/heritageContent'
 import { api, formatDuration } from '../../services/api'
 import { UI_COPY, type LanguageCode, type Video } from '../../types'
 
@@ -30,23 +30,34 @@ export default function VideoLibraryPage() {
   })), [videos])
 
   return (
-    <main className="heritage-page">
-      <PublicHeader language={language} />
+    <main className="heritage-page heritage-library-page">
+      <div className="library-intro-panel">
+        <PublicHeader language={language} />
 
-      <section className="heritage-hero">
-        <div className="heritage-hero-copy">
-          <p className="heritage-eyebrow">{heritageCopy.eyebrow}</p>
-          <h1>{heritageCopy.welcome}</h1>
-          <p>{heritageCopy.introduction}</p>
-          <a href="#chapters" className="heritage-scroll-link">
-            <span aria-hidden>↓</span>{heritageCopy.explore}
-          </a>
-        </div>
-        <div className="heritage-hero-art" aria-label={HERITAGE_CHAPTERS[0].menuLabel[language]}>
-          <img src={HERITAGE_CHAPTERS[0].thumbnail} alt="" />
-          <div className="hero-art-caption"><span>16°00′N</span><strong>NGŨ HÀNH SƠN</strong><span>108°15′E</span></div>
-        </div>
-      </section>
+        <section className="heritage-hero project-intro-hero">
+          <figure className="project-poster project-poster-placeholder">
+            <div className="project-poster-empty" role="img" aria-label="Chưa có ảnh poster">
+              <svg viewBox="0 0 48 48" aria-hidden="true">
+                <path d="M8 7h32a4 4 0 0 1 4 4v26a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V11a4 4 0 0 1 4-4Z" />
+                <circle cx="34" cy="17" r="4" />
+                <path d="m5 34 11-11a3 3 0 0 1 4 0l8 8 4-4a3 3 0 0 1 4 0l8 8" />
+              </svg>
+            </div>
+          </figure>
+          <div className="heritage-hero-copy project-intro-copy">
+            <p className="heritage-eyebrow">{heritageCopy.eyebrow}</p>
+            <h1>{heritageCopy.welcome}</h1>
+            <div className="project-intro-text">
+              {PROJECT_INTRO[language].map(paragraph => <p key={paragraph}>{paragraph}</p>)}
+            </div>
+            <a href="#chapters" className="heritage-scroll-link">
+              <span aria-hidden>
+                <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" /></svg>
+              </span>{heritageCopy.explore}
+            </a>
+          </div>
+        </section>
+      </div>
 
       <section id="chapters" className="heritage-chapters">
         <div className="heritage-section-heading">
@@ -60,7 +71,7 @@ export default function VideoLibraryPage() {
         {!loading && !error && (
           <div className="heritage-story-list">
             {chapters.map(({ chapter, video }) => (
-              <Link key={chapter.videoId} to={`/videos/${chapter.videoId}`} className="heritage-story-card">
+              <Link key={chapter.videoId} to={chapter.route} className="heritage-story-card">
                 <div className="heritage-story-image">
                   <img src={chapter.thumbnail} alt="" />
                   <span className="heritage-play" aria-hidden>▶</span>
@@ -79,11 +90,6 @@ export default function VideoLibraryPage() {
         )}
       </section>
 
-      <footer className="heritage-footer">
-        <span className="heritage-seal mini" aria-hidden>五</span>
-        <p>{heritageCopy.siteName}<small>{copy.originalAudio}</small></p>
-        <span>ĐÀ NẴNG · VIỆT NAM</span>
-      </footer>
     </main>
   )
 }

@@ -7,6 +7,7 @@ type LocalizedText = Record<LanguageCode, string>
 export interface HeritageChapter {
   number: string
   videoId: string
+  route: string
   menuLabel: LocalizedText
   title: LocalizedText
   description: LocalizedText
@@ -28,7 +29,7 @@ export const HERITAGE_COPY: Record<LanguageCode, {
 }> = {
   'vi-VN': {
     siteName: 'Ma nhai Ngũ Hành Sơn',
-    welcome: 'Lời chào từ di sản',
+    welcome: 'Chào mừng bạn đến với Ngũ Hành Ma Nhai!',
     eyebrow: 'HÀNH TRÌNH KHÁM PHÁ',
     introduction: 'Khám phá những văn tự được khắc trực tiếp trên vách đá và hang động Ngũ Hành Sơn - nơi lưu giữ nhiều lớp ký ức về lịch sử, văn hóa và giao lưu quốc tế.',
     explore: 'Chọn nội dung khám phá',
@@ -80,10 +81,67 @@ export const HERITAGE_COPY: Record<LanguageCode, {
   },
 }
 
+export const PROJECT_INTRO: Record<LanguageCode, string[]> = {
+  'vi-VN': [
+    'Ma nhai tại di tích danh thắng Ngũ Hành Sơn là một di sản tư liệu vô cùng độc đáo thuộc Chương trình Ký ức Thế giới được UNESCO công nhận. Tuy nhiên, di sản này vẫn chưa thực sự được cộng đồng biết đến rộng rãi, khiến nhiều tư liệu quý về lịch sử, tôn giáo, địa lý, văn học, ngôn ngữ và nghệ thuật chưa thể lan tỏa trọn vẹn đến công chúng.',
+    'Dự án đem đến những kiến thức dễ tiếp cận bằng các video tư liệu thuyết minh sinh động kết hợp phụ đề đa ngôn ngữ, góp phần bảo tồn giá trị văn hóa truyền thống, thúc đẩy du lịch thông minh và lan tỏa niềm tự hào di sản đến cộng đồng.',
+  ],
+  'en-US': [
+    'The Ma Nhai inscriptions at the Marble Mountains are a distinctive documentary heritage recognized by UNESCO’s Memory of the World programme.',
+    'Through narrated documentary videos and multilingual subtitles, this project makes their history, culture and artistic value easier for local communities and international visitors to explore.',
+  ],
+  'ru-RU': [
+    'Надписи Ма-Няй в Мраморных горах — уникальное документальное наследие, включённое в программу ЮНЕСКО «Память мира».',
+    'Документальные видео и многоязычные субтитры помогают жителям и зарубежным гостям ближе познакомиться с их исторической и культурной ценностью.',
+  ],
+  'zh-CN': [
+    '五行山摩崖石刻是被列入联合国教科文组织“世界记忆”计划的独特文献遗产。',
+    '本项目通过生动的纪录短片与多语言字幕，让本地居民和国际游客更容易了解其历史、文化与艺术价值。',
+  ],
+}
+
+export const DECODE_COPY: Record<LanguageCode, {
+  eyebrow: string
+  title: string
+  question: string
+  hint: string
+  result: string
+}> = {
+  'vi-VN': {
+    eyebrow: 'CHUYÊN ĐỀ · GIẢI MÃ DI SẢN',
+    title: 'Giải mã ma nhai',
+    question: 'Bạn đang tò mò về câu chuyện của bia ma nhai nào tại Ngũ Hành Sơn?',
+    hint: '',
+    result: 'Video phân tích',
+  },
+  'en-US': {
+    eyebrow: 'FEATURE · DECODING HERITAGE',
+    title: 'Decoding Ma Nhai',
+    question: 'What do the inscriptions reveal about the history and cultural exchange of the Marble Mountains?',
+    hint: 'Choose a video to explore the story, chronology and layers of meaning preserved in each inscription.',
+    result: 'Analysis video',
+  },
+  'ru-RU': {
+    eyebrow: 'СПЕЦТЕМА · РАСШИФРОВКА НАСЛЕДИЯ',
+    title: 'Расшифровка Ма-Няй',
+    question: 'Что каменные надписи рассказывают об истории и культурных связях Мраморных гор?',
+    hint: 'Выберите видео, чтобы узнать историю, датировку и смысл каждого памятника.',
+    result: 'Видеоразбор',
+  },
+  'zh-CN': {
+    eyebrow: '专题 · 解码文化遗产',
+    title: '解码摩崖石刻',
+    question: '石刻文字如何讲述五行山的历史与文化交流？',
+    hint: '选择视频，深入了解每方碑刻所保存的故事、年代与文化内涵。',
+    result: '解析视频',
+  },
+}
+
 export const HERITAGE_CHAPTERS: HeritageChapter[] = [
   {
     number: '01',
     videoId: 'hoi-an',
+    route: '/videos/hoi-an',
     menuLabel: {
       'vi-VN': 'Tổng quan Ma nhai Ngũ Hành Sơn',
       'en-US': 'Overview of Ma Nhai inscriptions',
@@ -106,12 +164,13 @@ export const HERITAGE_CHAPTERS: HeritageChapter[] = [
   },
   {
     number: '02',
-    videoId: 'ha-long',
+    videoId: 'giai-ma-ma-nhai',
+    route: '/giai-ma-ma-nhai',
     menuLabel: {
-      'vi-VN': 'Bia “Phổ Đà Sơn Linh Trung Phật”',
-      'en-US': 'The “Phổ Đà Sơn Linh Trung Phật” inscription',
-      'ru-RU': 'Надпись «Фо-да-шон-линь-чунг-фат»',
-      'zh-CN': '“普陀山灵中佛”碑刻',
+      'vi-VN': 'Giải mã ma nhai',
+      'en-US': 'Decoding Ma Nhai',
+      'ru-RU': 'Расшифровка Ма-Няй',
+      'zh-CN': '解码摩崖石刻',
     },
     title: {
       'vi-VN': '“Phổ Đà Sơn Linh Trung Phật” - Dấu ấn giao thoa văn hóa Việt - Nhật - Trung từ năm 1640',

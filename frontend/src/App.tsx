@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import LanguageSelectPage from './pages/public/LanguageSelectPage'
 import VideoLibraryPage from './pages/public/VideoLibraryPage'
 import VideoDetailPage from './pages/public/VideoDetailPage'
+import DecodeLibraryPage from './pages/public/DecodeLibraryPage'
 import AdminLoginPage from './pages/admin/AdminLoginPage'
 import AdminDashboardPage from './pages/admin/AdminDashboardPage'
 import AdminUploadPage from './pages/admin/AdminUploadPage'
@@ -13,6 +14,8 @@ export default function App() {
       <Routes>
         <Route path="/" element={<LanguageSelectPage />} />
         <Route path="/videos" element={<VideoLibraryPage />} />
+        <Route path="/giai-ma-ma-nhai" element={<DecodeLibraryPage />} />
+        <Route path="/videos/ha-long" element={<Navigate to="/videos/giai-ma-ma-nhai" replace />} />
         <Route path="/videos/:id" element={<VideoDetailPage />} />
         <Route path="/admin/login" element={<AdminLoginPage />} />
         <Route path="/admin" element={<AdminDashboardPage />} />

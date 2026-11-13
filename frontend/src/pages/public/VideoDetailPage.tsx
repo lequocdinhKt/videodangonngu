@@ -4,7 +4,7 @@ import PublicHeader from '../../components/public/PublicHeader'
 import VideoPlayer from '../../components/player/VideoPlayer'
 import { HERITAGE_CHAPTERS, HERITAGE_COPY, localizeHeritageVideo } from '../../content/heritageContent'
 import { api } from '../../services/api'
-import { UI_COPY, type LanguageCode, type Video } from '../../types'
+import { LANGUAGES, UI_COPY, type LanguageCode, type Video } from '../../types'
 
 export default function VideoDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -12,18 +12,29 @@ export default function VideoDetailPage() {
   const copy = UI_COPY[language]
   const heritageCopy = HERITAGE_COPY[language]
   const [video, setVideo] = useState<Video | null>(null)
-  const [error, setError] = useState('')
   const chapterIndex = HERITAGE_CHAPTERS.findIndex(item => item.videoId === id)
   const chapter = HERITAGE_CHAPTERS[chapterIndex]
-  const nextChapter = HERITAGE_CHAPTERS[(chapterIndex + 1) % HERITAGE_CHAPTERS.length]
+  const previewVideo: Video | null = chapter ? {
+    id: chapter.videoId,
+    title: chapter.title[language],
+    description: chapter.description[language],
+    status: 'published',
+    duration_ms: null,
+    thumbnail_url: chapter.thumbnail,
+    video_url: null,
+    languages: LANGUAGES.map(item => ({ language_code: item.code, subtitle_url: null, status: 'pending' })),
+    translations: [],
+    created_at: '',
+    updated_at: '',
+  } : null
+  const shownVideo = video || previewVideo
 
   const load = useCallback(() => {
     if (!id) return
-    setError('')
     api.getVideo(id, language)
       .then(current => setVideo(localizeHeritageVideo(current, language)))
-      .catch(err => setError(err instanceof Error ? err.message : copy.waking))
-  }, [copy.waking, id, language])
+      .catch(() => setVideo(null))
+  }, [id, language])
 
   useEffect(() => { load() }, [load])
 
@@ -42,25 +53,8 @@ export default function VideoDetailPage() {
         <h1>{chapter.menuLabel[language]}</h1>
       </header>
 
-      {!video && <div className={`state-card ${error ? 'error-state' : ''}`}>
-        {error ? <><strong>{copy.waking}</strong><p>{error}</p><button onClick={load} className="secondary-button">{copy.retry}</button></> : <><span className="spinner" /><p>{copy.loading}</p></>}
-      </div>}
-
-      {video && <>
-        <VideoPlayer video={video} initialLanguage={language} />
-        <article className="heritage-video-copy">
-          <div className="heritage-ornament" aria-hidden><span>◆</span><i /><span>◆</span></div>
-          <h2>{video.title}</h2>
-          <p>{video.description}</p>
-          <div className="heritage-note"><span>CC</span><p>{copy.originalAudio}<small>{copy.subtitles}: VI · EN · RU · ZH</small></p></div>
-        </article>
-
-        {nextChapter && nextChapter.videoId !== chapter.videoId && (
-          <Link to={`/videos/${nextChapter.videoId}`} className="next-chapter-card">
-            <img src={nextChapter.thumbnail} alt="" />
-            <div><p>{heritageCopy.next}</p><strong>{nextChapter.menuLabel[language]}</strong><span>{heritageCopy.watch} →</span></div>
-          </Link>
-        )}
+      {shownVideo && <>
+        <VideoPlayer video={shownVideo} initialLanguage={language} />
       </>}
     </main>
   )

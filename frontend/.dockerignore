@@ -1,0 +1,5 @@
+node_modules
+dist
+public/demo
+.env
+npm-debug.log*

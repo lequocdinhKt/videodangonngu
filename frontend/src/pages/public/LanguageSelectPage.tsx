@@ -22,7 +22,6 @@ export default function LanguageSelectPage() {
   return (
     <main className="language-page">
       <section className="language-panel" aria-labelledby="language-title">
-        <div className="heritage-seal language-seal" aria-hidden>五</div>
         <p className="eyebrow">DI SẢN · NGŨ HÀNH SƠN</p>
         <h1 id="language-title">{copy.chooseLanguage}</h1>
         <p className="lead">{copy.chooseLanguageHint}</p>
