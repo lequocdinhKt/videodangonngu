@@ -1,18 +1,18 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import PublicHeader from '../../components/public/PublicHeader'
-import { DECODE_COPY, HERITAGE_CHAPTERS, HERITAGE_COPY, localizeHeritageVideo } from '../../content/heritageContent'
+import { DECODE_COPY, HERITAGE_COPY, getHeritageChapter, localizeHeritageVideo } from '../../content/heritageContent'
 import { api, formatDuration } from '../../services/api'
 import { UI_COPY, type LanguageCode, type Video } from '../../types'
 
-const VIDEO_ID = 'giai-ma-ma-nhai'
+const CHAPTER_SLUG = 'giai-ma-ma-nhai'
 
 export default function DecodeLibraryPage() {
   const language = (localStorage.getItem('preferredLanguage') || 'vi-VN') as LanguageCode
   const copy = UI_COPY[language]
   const heritageCopy = HERITAGE_COPY[language]
   const decodeCopy = DECODE_COPY[language]
-  const chapter = HERITAGE_CHAPTERS.find(item => item.videoId === VIDEO_ID)!
+  const chapter = getHeritageChapter(CHAPTER_SLUG)!
   const [video, setVideo] = useState<Video | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -20,7 +20,12 @@ export default function DecodeLibraryPage() {
   const load = useCallback(() => {
     setLoading(true)
     setError('')
-    api.getVideo(VIDEO_ID, language)
+    if (!chapter.productionVideoId) {
+      setError(copy.videoNotBound)
+      setLoading(false)
+      return
+    }
+    api.getVideo(chapter.productionVideoId, language)
       .then(current => setVideo(localizeHeritageVideo(current, language)))
       .catch(err => setError(err instanceof Error ? err.message : copy.waking))
       .finally(() => setLoading(false))
@@ -46,7 +51,7 @@ export default function DecodeLibraryPage() {
         {loading && <div className="state-card"><span className="spinner" /><p>{copy.loading}</p></div>}
         {!loading && error && <div className="state-card error-state"><strong>{copy.videoComingSoon}</strong><p>{error}</p><button onClick={load} className="secondary-button">{copy.retry}</button></div>}
         {!loading && video && (
-          <Link to={`/videos/${VIDEO_ID}`} className="decode-video-card">
+          <Link to={`/videos/${chapter.slug}`} className="decode-video-card">
             <div className="decode-video-thumbnail">
               <img src={chapter.thumbnail} alt="" />
               <span className="decode-play" aria-hidden>

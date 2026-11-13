@@ -26,7 +26,7 @@ export default function VideoLibraryPage() {
 
   const chapters = useMemo(() => HERITAGE_CHAPTERS.map(chapter => ({
     chapter,
-    video: videos.find(video => video.id === chapter.videoId),
+    video: videos.find(video => video.id === chapter.productionVideoId),
   })), [videos])
 
   return (
@@ -71,7 +71,7 @@ export default function VideoLibraryPage() {
         {!loading && !error && (
           <div className="heritage-story-list">
             {chapters.map(({ chapter, video }) => (
-              <Link key={chapter.videoId} to={chapter.route} className="heritage-story-card">
+              <Link key={chapter.slug} to={chapter.route} className="heritage-story-card">
                 <div className="heritage-story-image">
                   <img src={chapter.thumbnail} alt="" />
                   <span className="heritage-play" aria-hidden>▶</span>
@@ -80,7 +80,7 @@ export default function VideoLibraryPage() {
                   <p><span>{chapter.number}</span>{heritageCopy.chapter}</p>
                   <h3>{chapter.title[language]}</h3>
                   <div className="story-meta">
-                    <span>{formatDuration(video?.duration_ms || 0)}</span>
+                    <span>{video ? formatDuration(video.duration_ms || 0) : copy.videoComingSoon}</span>
                     <strong>{heritageCopy.watch}<i aria-hidden>→</i></strong>
                   </div>
                 </div>

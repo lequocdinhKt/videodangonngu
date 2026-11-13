@@ -51,7 +51,7 @@ export default function PublicHeader({ language, compact = false }: Props) {
             <nav id="heritage-chapter-menu" className="chapter-menu" aria-label={copy.menu}>
               <div className="chapter-menu-title"><span>{copy.menu}</span><small>02</small></div>
               {HERITAGE_CHAPTERS.map(chapter => (
-                <Link key={chapter.videoId} to={chapter.route} onClick={() => setOpen(false)}>
+                <Link key={chapter.slug} to={chapter.route} onClick={() => setOpen(false)}>
                   <span>{chapter.number}</span><strong>{chapter.menuLabel[language]}</strong><i aria-hidden>↗</i>
                 </Link>
               ))}

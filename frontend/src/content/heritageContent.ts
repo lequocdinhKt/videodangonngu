@@ -6,7 +6,8 @@ type LocalizedText = Record<LanguageCode, string>
 
 export interface HeritageChapter {
   number: string
-  videoId: string
+  slug: string
+  productionVideoId: string | null
   route: string
   menuLabel: LocalizedText
   title: LocalizedText
@@ -140,7 +141,8 @@ export const DECODE_COPY: Record<LanguageCode, {
 export const HERITAGE_CHAPTERS: HeritageChapter[] = [
   {
     number: '01',
-    videoId: 'hoi-an',
+    slug: 'hoi-an',
+    productionVideoId: null,
     route: '/videos/hoi-an',
     menuLabel: {
       'vi-VN': 'Tổng quan Ma nhai Ngũ Hành Sơn',
@@ -164,7 +166,8 @@ export const HERITAGE_CHAPTERS: HeritageChapter[] = [
   },
   {
     number: '02',
-    videoId: 'giai-ma-ma-nhai',
+    slug: 'giai-ma-ma-nhai',
+    productionVideoId: '5216c345-5779-4549-9439-22c6b5a0e760',
     route: '/giai-ma-ma-nhai',
     menuLabel: {
       'vi-VN': 'Giải mã ma nhai',
@@ -188,8 +191,16 @@ export const HERITAGE_CHAPTERS: HeritageChapter[] = [
   },
 ]
 
+export function getHeritageChapter(slug: string | undefined): HeritageChapter | undefined {
+  return HERITAGE_CHAPTERS.find(item => item.slug === slug)
+}
+
+export function getHeritageChapterForProductionVideo(videoId: string): HeritageChapter | undefined {
+  return HERITAGE_CHAPTERS.find(item => item.productionVideoId === videoId)
+}
+
 export function localizeHeritageVideo(video: Video, language: LanguageCode): Video {
-  const chapter = HERITAGE_CHAPTERS.find(item => item.videoId === video.id)
+  const chapter = getHeritageChapterForProductionVideo(video.id)
   if (!chapter) return video
   return {
     ...video,
