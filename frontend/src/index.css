@@ -915,6 +915,36 @@ button { cursor: pointer; }
   scroll-snap-stop:always;
 }
 
+@media (min-width: 821px) {
+  .library-intro-panel .project-intro-hero {
+    width:min(1440px,calc(100% - 56px));
+    grid-template-columns:280px minmax(0,1fr);
+    gap:clamp(56px,6vw,96px);
+  }
+
+  .library-intro-panel .project-intro-copy {
+    max-width:none;
+  }
+
+  .library-intro-panel .project-intro-hero h1 {
+    max-width:880px;
+    font-size:clamp(50px,5.15vw,72px);
+  }
+
+  .library-intro-panel .project-intro-text,
+  .library-intro-panel .project-intro-text p {
+    max-width:760px;
+  }
+
+  .library-intro-panel .project-intro-copy .heritage-scroll-link {
+    position:static;
+    width:max-content;
+    max-width:100%;
+    justify-content:flex-start;
+    margin-top:24px;
+  }
+}
+
 @media (max-width: 520px) {
   .library-intro-panel .project-intro-hero {
     min-height:calc(100vh - 68px);
