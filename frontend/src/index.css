@@ -928,12 +928,20 @@ button { cursor: pointer; }
 
   .library-intro-panel .project-intro-hero h1 {
     max-width:880px;
-    font-size:clamp(50px,5.15vw,72px);
+    font-size:clamp(60px,6.15vw,86px);
   }
 
   .library-intro-panel .project-intro-text,
   .library-intro-panel .project-intro-text p {
-    max-width:760px;
+    max-width:720px;
+  }
+
+  .library-intro-panel .project-intro-copy .heritage-eyebrow {
+    font-size:14px;
+  }
+
+  .library-intro-panel .project-intro-text p {
+    font-size:18px;
   }
 
   .library-intro-panel .project-intro-copy .heritage-scroll-link {
@@ -945,12 +953,51 @@ button { cursor: pointer; }
   }
 }
 
+@media (min-width: 521px) and (max-width: 820px) {
+  .library-intro-panel .project-intro-copy .heritage-eyebrow {
+    font-size:14px;
+  }
+
+  .library-intro-panel .project-intro-hero h1 {
+    font-size:clamp(42px,7.5vw,58px);
+  }
+
+  .library-intro-panel .project-intro-text p {
+    font-size:17px;
+  }
+}
+
 @media (max-width: 520px) {
   .library-intro-panel .project-intro-hero {
     min-height:calc(100vh - 68px);
     min-height:calc(100dvh - 68px);
     padding-top:clamp(40px,7vh,60px);
     padding-bottom:64px;
+  }
+
+  .library-intro-panel .project-intro-copy .heritage-eyebrow {
+    font-size:12px;
+  }
+
+  .library-intro-panel .project-intro-hero h1 {
+    font-size:clamp(29px,8vw,34px);
+  }
+
+  .library-intro-panel .project-intro-text p {
+    font-size:16px;
+    line-height:1.6;
+  }
+
+  /* Russian words are longer than the Vietnamese, English, and Chinese labels. */
+  .heritage-library-page[lang="ru-RU"] .project-intro-copy .heritage-eyebrow {
+    font-size:9px;
+    line-height:1.45;
+    letter-spacing:.1em;
+  }
+
+  .heritage-library-page[lang="ru-RU"] .project-intro-text p {
+    text-align:left;
+    text-justify:auto;
   }
 }
 

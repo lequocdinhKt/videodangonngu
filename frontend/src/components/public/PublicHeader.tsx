@@ -51,7 +51,7 @@ export default function PublicHeader({ language, compact = false }: Props) {
   return (
     <header className={`heritage-header ${compact ? 'is-compact' : ''}`}>
       <Link to="/videos" className="heritage-brand" aria-label={copy.home}>
-        <span><small>DI SẢN ĐÀ NẴNG</small><strong>Chào mừng!!!</strong></span>
+        <span><small>DI SẢN ĐÀ NẴNG</small><strong>{copy.siteName}</strong></span>
       </Link>
       <div className="heritage-header-actions">
         <div className="heritage-language-picker" ref={languagePickerRef}>

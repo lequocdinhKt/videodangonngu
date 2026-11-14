@@ -32,7 +32,7 @@ export default function VideoLibraryPage() {
   })), [videos])
 
   return (
-    <main className="heritage-page heritage-library-page">
+    <main className="heritage-page heritage-library-page" lang={language}>
       <div className="library-intro-panel">
         <PublicHeader language={language} />
 
