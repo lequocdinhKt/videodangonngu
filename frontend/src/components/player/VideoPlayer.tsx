@@ -24,7 +24,9 @@ function FullscreenIcon() { return <svg viewBox="0 0 24 24" aria-hidden><path d=
 export default function VideoPlayer({ video, initialLanguage }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
+  const trackRef = useRef<HTMLTrackElement>(null)
   const settingsButtonRef = useRef<HTMLButtonElement>(null)
+  const settingsPanelRef = useRef<HTMLDivElement>(null)
   const hideControlsTimer = useRef<number | undefined>(undefined)
   const [subtitleLanguage, setSubtitleLanguage] = useState<LanguageCode>(initialLanguage)
   const [subtitlesEnabled, setSubtitlesEnabled] = useState(true)
@@ -35,6 +37,7 @@ export default function VideoPlayer({ video, initialLanguage }: Props) {
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState((video.duration_ms || 0) / 1000)
   const [muted, setMuted] = useState(false)
+  const [volume, setVolume] = useState(1)
   const [playbackRate, setPlaybackRate] = useState(1)
   const copy = UI_COPY[initialLanguage]
   const hasVideo = Boolean(video.video_url)
@@ -62,6 +65,12 @@ export default function VideoPlayer({ video, initialLanguage }: Props) {
   }, [subtitleLanguage, subtitlesEnabled, video.languages])
   useEffect(() => { setPlaying(false); setCurrentTime(0); setDuration((video.duration_ms || 0) / 1000); setControlsVisible(true); setSettingsOpen(false) }, [video.duration_ms, video.video_url])
   useEffect(() => { if (videoRef.current) videoRef.current.playbackRate = playbackRate }, [playbackRate])
+  useEffect(() => {
+    // A dynamically inserted <track> is disabled by some browsers unless its
+    // TextTrack mode is explicitly changed from "disabled" to "showing".
+    if (trackUrl && trackRef.current) trackRef.current.track.mode = 'showing'
+  }, [trackUrl])
+  useEffect(() => { if (settingsOpen) settingsPanelRef.current?.focus() }, [settingsOpen])
 
   const togglePlayback = async () => {
     const element = videoRef.current
@@ -70,6 +79,16 @@ export default function VideoPlayer({ video, initialLanguage }: Props) {
     revealControls()
   }
   const toggleMute = () => { const element = videoRef.current; if (!element) return; element.muted = !element.muted; setMuted(element.muted); revealControls() }
+  const setPlayerVolume = (nextVolume: number) => {
+    const element = videoRef.current
+    if (!element) return
+    const safeVolume = Math.min(1, Math.max(0, nextVolume))
+    element.volume = safeVolume
+    element.muted = safeVolume === 0
+    setVolume(safeVolume)
+    setMuted(element.muted)
+    revealControls()
+  }
   const seekBy = (seconds: number) => {
     const element = videoRef.current
     if (!element || !hasVideo) return
@@ -90,11 +109,12 @@ export default function VideoPlayer({ video, initialLanguage }: Props) {
   }
   const settingsLabel = initialLanguage === 'vi-VN' ? 'Cài đặt video' : initialLanguage === 'ru-RU' ? 'Настройки видео' : initialLanguage === 'zh-CN' ? '视频设置' : 'Video settings'
   const speedLabel = initialLanguage === 'vi-VN' ? 'Tốc độ phát' : initialLanguage === 'ru-RU' ? 'Скорость' : initialLanguage === 'zh-CN' ? '播放速度' : 'Playback speed'
+  const volumeLabel = initialLanguage === 'vi-VN' ? 'Âm lượng' : initialLanguage === 'ru-RU' ? 'Громкость' : initialLanguage === 'zh-CN' ? '音量' : 'Volume'
 
   return <div ref={containerRef} className={`video-shell custom-video-player ${hasVideo ? '' : 'is-preview'} ${controlsVisible || !playing || settingsOpen ? 'controls-visible' : 'controls-hidden'}`} onContextMenu={event => event.preventDefault()} onKeyDown={handleKeyboard} onPointerMove={revealControls} onFocusCapture={revealControls} tabIndex={0}>
     <div className="video-stage" onClick={() => void togglePlayback()}>
       <video ref={videoRef} src={video.video_url || undefined} poster={video.thumbnail_url || undefined} preload="metadata" controlsList="nodownload noremoteplayback" disablePictureInPicture playsInline className="video-element" onPlay={() => { setPlaying(true); revealControls() }} onPause={() => { setPlaying(false); setControlsVisible(true) }} onTimeUpdate={event => setCurrentTime(event.currentTarget.currentTime)} onLoadedMetadata={event => setDuration(event.currentTarget.duration || 0)} onEnded={() => { setPlaying(false); setControlsVisible(true) }}>
-        {trackUrl && <track key={trackUrl} src={trackUrl} kind="subtitles" srcLang={subtitleLanguage.split('-')[0]} label={LANGUAGES.find(item => item.code === subtitleLanguage)?.nativeLabel} default />}
+        {trackUrl && <track ref={trackRef} key={trackUrl} src={trackUrl} kind="subtitles" srcLang={subtitleLanguage.split('-')[0]} label={LANGUAGES.find(item => item.code === subtitleLanguage)?.nativeLabel} default onLoad={event => { event.currentTarget.track.mode = 'showing' }} />}
       </video>
       {!playing && <button type="button" className="player-center-button" onClick={event => { event.stopPropagation(); void togglePlayback() }} disabled={!hasVideo} aria-label={copy.play}><PlayIcon paused /></button>}
       {!hasVideo && <div className="player-preview-label"><span />{copy.videoComingSoon}</div>}
@@ -105,12 +125,20 @@ export default function VideoPlayer({ video, initialLanguage }: Props) {
         <div className="player-control-cluster">
           <button type="button" className="player-control-button" onClick={() => void togglePlayback()} disabled={!hasVideo} aria-label={playing ? copy.pause : copy.play}><PlayIcon paused={!playing} /></button>
           <button type="button" className="player-control-button" onClick={toggleMute} disabled={!hasVideo} aria-label={muted ? copy.unmute : copy.mute}><VolumeIcon muted={muted} /></button>
+          <label className="player-volume" aria-label={volumeLabel}>
+            <span className="sr-only">{volumeLabel}</span>
+            <input type="range" min="0" max="1" step="0.05" value={muted ? 0 : volume} disabled={!hasVideo} style={{ '--volume': `${(muted ? 0 : volume) * 100}%` } as CSSProperties} onChange={event => setPlayerVolume(Number(event.target.value))} />
+          </label>
           <span className="player-time">{formatTime(currentTime)} <i>/</i> {formatTime(duration)}</span>
         </div>
         <div className="player-control-cluster player-control-actions">
           <button type="button" className={`player-control-button cc-button ${subtitlesEnabled ? 'is-active' : ''}`} onClick={() => { setSubtitlesEnabled(enabled => !enabled); revealControls() }} disabled={available.length === 0} aria-label={copy.subtitles} aria-pressed={subtitlesEnabled}>CC</button>
           <div className="settings-control-wrap">
-            {settingsOpen && <div className="player-settings-menu" role="menu" aria-label={settingsLabel}>
+            {settingsOpen && <>
+              <button type="button" className="player-settings-backdrop" onClick={closeSettings} aria-label={initialLanguage === 'vi-VN' ? 'Đóng cài đặt video' : 'Close video settings'} />
+              <div ref={settingsPanelRef} className="player-settings-menu" role="dialog" aria-modal="true" aria-label={settingsLabel} tabIndex={-1}>
+                <div className="player-settings-grabber" aria-hidden />
+                <div className="player-settings-heading"><span>{settingsLabel}</span><button type="button" onClick={closeSettings} aria-label={initialLanguage === 'vi-VN' ? 'Đóng' : 'Close'}>×</button></div>
               <section><p>{copy.subtitles}</p><div role="group" aria-label={copy.subtitles}>
                 <button type="button" role="menuitemradio" aria-checked={!subtitlesEnabled} className={!subtitlesEnabled ? 'is-selected' : ''} onClick={() => { setSubtitlesEnabled(false); closeSettings() }}><span>{copy.subtitlesOff}</span>{!subtitlesEnabled && <b aria-hidden>✓</b>}</button>
                 {LANGUAGES.map(item => { const isAvailable = available.some(track => track.code === item.code); const isSelected = subtitlesEnabled && subtitleLanguage === item.code; return <button type="button" key={item.code} role="menuitemradio" aria-checked={isSelected} className={`${isSelected ? 'is-selected' : ''} ${!isAvailable ? 'is-unavailable' : ''}`} disabled={!isAvailable} onClick={() => { setSubtitlesEnabled(true); setSubtitleLanguage(item.code); closeSettings() }}><span><strong>{item.nativeLabel}</strong>{!isAvailable && <small>{copy.subtitleUnavailable}</small>}</span>{isSelected && <b aria-hidden>✓</b>}</button> })}
@@ -118,7 +146,8 @@ export default function VideoPlayer({ video, initialLanguage }: Props) {
               <section><p>{speedLabel}</p><div className="playback-rates" role="group" aria-label={speedLabel}>
                 {[0.75, 1, 1.25, 1.5].map(rate => <button type="button" key={rate} role="menuitemradio" aria-checked={playbackRate === rate} className={playbackRate === rate ? 'is-selected' : ''} onClick={() => { setPlaybackRate(rate); closeSettings() }}><span>{rate === 1 ? '1×' : `${rate}×`}</span>{playbackRate === rate && <b aria-hidden>✓</b>}</button>)}
               </div></section>
-            </div>}
+              </div>
+            </>}
             <button ref={settingsButtonRef} type="button" className="player-control-button" onClick={() => { setSettingsOpen(open => !open); revealControls() }} aria-label={settingsLabel} aria-expanded={settingsOpen}><SettingsIcon /></button>
           </div>
           <button type="button" className="player-control-button" onClick={() => void toggleFullscreen()} aria-label={copy.fullscreen}><FullscreenIcon /></button>
