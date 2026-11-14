@@ -621,6 +621,8 @@ button { cursor: pointer; }
 .detail-title-block h1 { max-width:850px; font-size:clamp(40px,6vw,68px); line-height:1; }
 .heritage-detail-page .video-shell { border:8px solid #fff; border-radius:24px; box-shadow:0 24px 65px rgba(16,46,43,.16); }
 .heritage-detail-page .player-controls { padding-right:20px; padding-bottom:15px; padding-left:20px; }
+.videojs-aspect-frame { position:relative; width:100%; aspect-ratio:16 / 9; background:#000; }
+.videojs-aspect-frame .videojs-skin { position:absolute; inset:0; width:100% !important; height:100% !important; min-height:0; }
 .heritage-video-copy { padding:48px 0 52px; text-align:center; }
 .heritage-ornament { display:flex; justify-content:center; align-items:center; gap:10px; margin-bottom:26px; color:var(--heritage-red); }
 .heritage-ornament i { width:70px; height:1px; background:#c8d8d3; }.heritage-ornament span { font-size:9px; }
