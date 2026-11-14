@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import PublicHeader from '../../components/public/PublicHeader'
 import { DECODE_COPY, HERITAGE_COPY, getHeritageChapter } from '../../content/heritageContent'
-import { api, formatDuration } from '../../services/api'
+import { api } from '../../services/api'
 import { usePreferredLanguage } from '../../services/language'
 import { UI_COPY, type Video } from '../../types'
 
@@ -50,10 +50,6 @@ export default function DecodeLibraryPage() {
           <Link to={`/videos/${chapter.slug}`} className="decode-video-card">
             <div className="decode-video-thumbnail">
               <img src={chapter.thumbnail} alt="" />
-              <span className="decode-play" aria-hidden>
-                <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
-              </span>
-              <small>{formatDuration(video.duration_ms)}</small>
             </div>
             <div className="decode-video-copy">
               <h2>{video.title}</h2>

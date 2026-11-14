@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import PublicHeader from '../../components/public/PublicHeader'
 import projectPoster from '../../assets/ma-nhai-project-poster.jpg'
 import { HERITAGE_CHAPTERS, HERITAGE_COPY, PROJECT_INTRO } from '../../content/heritageContent'
-import { api, formatDuration } from '../../services/api'
+import { api } from '../../services/api'
 import { usePreferredLanguage } from '../../services/language'
 import { UI_COPY, type VideoSlot } from '../../types'
 
@@ -57,8 +57,7 @@ export default function VideoLibraryPage() {
 
       <section id="chapters" className="heritage-chapters">
         <div className="heritage-section-heading">
-          <div><p className="heritage-eyebrow">02 {heritageCopy.chapter.toUpperCase()}</p><h2>{heritageCopy.explore}</h2></div>
-          <p>{heritageCopy.exploreHint}</p>
+          <h2>{heritageCopy.explore}</h2>
         </div>
 
         {loading && <div className="state-card"><span className="spinner" /><p>{copy.loading}</p></div>}
@@ -70,15 +69,10 @@ export default function VideoLibraryPage() {
               <Link key={chapter.slug} to={chapter.route} className="heritage-story-card">
                 <div className="heritage-story-image">
                   <img src={chapter.thumbnail} alt="" />
-                  <span className="heritage-play" aria-hidden>▶</span>
                 </div>
                 <div className="heritage-story-copy">
-                  <p><span>{chapter.number}</span>{heritageCopy.chapter}</p>
-                  <h3>{chapter.title[language]}</h3>
-                  <div className="story-meta">
-                    <span>{video ? formatDuration(video.duration_ms || 0) : copy.videoComingSoon}</span>
-                    <strong>{heritageCopy.watch}<i aria-hidden>→</i></strong>
-                  </div>
+                  <h3>{video?.title || chapter.title[language]}</h3>
+                  <p>{video?.description || chapter.description[language]}</p>
                 </div>
               </Link>
             ))}
