@@ -656,6 +656,12 @@ button { cursor: pointer; }
 .caption-overlay-stack { display:grid; justify-items:center; gap:5px; max-width:100%; text-align:center; }
 .caption-overlay-cue { max-width:100%; padding:.2em .48em; color:#fff; background:rgb(5 8 10 / var(--caption-background-opacity, .75)); border-radius:.2em; font-weight:700; line-height:1.35; text-shadow:0 2px 5px rgba(0,0,0,.96),0 0 2px rgba(0,0,0,.96); white-space:pre-line; box-decoration-break:clone; -webkit-box-decoration-break:clone; }
 .caption-overlay-small .caption-overlay-cue { font-size:clamp(16px,1.7vw,19px); }.caption-overlay-medium .caption-overlay-cue { font-size:clamp(18px,2.1vw,24px); }.caption-overlay-large .caption-overlay-cue { font-size:clamp(20px,2.6vw,30px); }
+@media (max-width:640px) {
+  .caption-overlay-bottom { padding-bottom:48px; }
+  .caption-overlay-small .caption-overlay-cue { font-size:clamp(14px,3.7vw,17px); }
+  .caption-overlay-medium .caption-overlay-cue { font-size:clamp(16px,4.2vw,20px); }
+  .caption-overlay-large .caption-overlay-cue { font-size:clamp(18px,4.8vw,24px); }
+}
 .caption-appearance-control { position:absolute; z-index:36; top:12px; right:12px; opacity:0; pointer-events:none; transition:opacity .16s ease; }
 .caption-appearance-control[data-visible] { opacity:1; pointer-events:auto; }
 .caption-appearance-trigger { width:44px; height:44px; display:grid; place-items:center; padding:0; color:#fff; background:rgba(8,12,13,.74); border:1px solid rgba(255,255,255,.3); border-radius:50%; box-shadow:0 4px 16px rgba(0,0,0,.3); backdrop-filter:blur(8px); }
