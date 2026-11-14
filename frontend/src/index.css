@@ -176,7 +176,7 @@ button { cursor: pointer; }
 }
 
 @media (max-width: 640px) {
-  .player-settings-menu { width:min(272px,calc(100vw - 20px)); max-height:min(380px,calc(100% - 74px)); }
+  .player-settings-menu { width:min(272px,calc(100vw - 20px)); max-height:min(380px,calc(100dvh - 74px)); }
   .player-caption { bottom:66px; max-width:84%; font-size:16px; }
 }
 
