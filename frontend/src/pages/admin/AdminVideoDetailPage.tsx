@@ -40,7 +40,7 @@ export default function AdminVideoDetailPage() {
 
   useEffect(() => {
     if (preview?.status !== 'processing') return
-    const timer = window.setInterval(() => void load(), 2500)
+    const timer = window.setInterval(() => void load(), 1250)
     return () => window.clearInterval(timer)
   }, [load, preview?.status])
 
@@ -91,8 +91,22 @@ export default function AdminVideoDetailPage() {
 
   if (!preview) return <main className="admin-page"><div className="state-card">{error || 'Đang tải dữ liệu…'}</div></main>
 
-  const latestJob = [...preview.jobs].reverse().find(job => job.status === 'running' || job.status === 'failed')
   const selectedTrack = preview.languages.find(language => language.language_code === selectedLanguage)
+  const missingTracks = LANGUAGES.filter(language => language.code !== 'vi-VN' && !preview.languages.find(track => track.language_code === language.code)?.subtitle_url)
+  const progressForLanguage = (code: LanguageCode) => {
+    const track = preview.languages.find(language => language.language_code === code)
+    if (track?.status === 'completed' || track?.status === 'ready_for_review') return 100
+    const jobs = preview.jobs.filter(job => job.language_code === code && job.stage === 'translate')
+    const latest = [...jobs].sort((a, b) => b.created_at.localeCompare(a.created_at))[0]
+    return latest?.progress || 0
+  }
+  const translatingTracks = LANGUAGES.filter(language => language.code !== 'vi-VN' && (
+    preview.languages.find(track => track.language_code === language.code)?.status === 'processing'
+    || (!preview.languages.find(track => track.language_code === language.code)?.subtitle_url && preview.status === 'processing')
+  ))
+  const translationProgress = translatingTracks.length
+    ? Math.round(translatingTracks.reduce((total, language) => total + progressForLanguage(language.code), 0) / translatingTracks.length)
+    : 0
 
   return (
     <main className="admin-page">
@@ -104,9 +118,6 @@ export default function AdminVideoDetailPage() {
             <span className={`status-pill status-${preview.status}`}>{preview.status.replaceAll('_', ' ')}</span>
           </div>
           <div className="admin-actions">
-            {preview.status !== 'published' && <button className="secondary-button" disabled={Boolean(busy) || preview.status === 'processing'} onClick={() => void run('generate', () => api.generate(preview.video_id), 'Đã bắt đầu tạo bản dịch nháp.')}>
-              {preview.status === 'processing' ? 'Đang dịch…' : 'Tạo bản dịch nháp'}
-            </button>}
             <button className="primary-button" disabled={Boolean(busy)} onClick={() => void run('publish', () => preview.status === 'published' ? api.unpublish(preview.video_id) : api.publish(preview.video_id), preview.status === 'published' ? 'Đã gỡ xuất bản.' : 'Đã xuất bản video.')}>
               {preview.status === 'published' ? 'Gỡ xuất bản' : 'Xuất bản'}
             </button>
@@ -115,13 +126,6 @@ export default function AdminVideoDetailPage() {
 
         {error && <div className="admin-card danger" role="alert" style={{ marginBottom: 18 }}>{error}</div>}
         {message && <div className="admin-card success" role="status" style={{ marginBottom: 18 }}>{message}</div>}
-        {preview.status === 'processing' && <section className="admin-card" style={{ marginBottom: 18 }}>
-          <strong>Đang tạo bản dịch phụ đề nháp</strong>
-          <p className="muted">{latestJob?.language_code ? `${latestJob.language_code} · ` : ''}{latestJob?.stage || 'Khởi động'} {latestJob?.progress ?? 0}%</p>
-          <div className="progress-track"><div className="progress-bar" style={{ width: `${latestJob?.progress ?? 4}%` }} /></div>
-          <p className="muted" style={{ fontSize: 13, marginBottom: 0 }}>Nếu Groq báo giới hạn lượt gọi, bạn có thể thử lại sau hoặc tải SRT thủ công. AI không tự xuất bản.</p>
-        </section>}
-
         <div className="admin-grid two" style={{ alignItems: 'start', marginBottom: 18 }}>
           <section className="admin-card">
             <p className="field-label">XEM TRƯỚC VIDEO GỐC</p>
@@ -155,8 +159,21 @@ export default function AdminVideoDetailPage() {
         <section className="admin-card">
           <div className="admin-topbar" style={{ marginBottom: 18 }}>
             <div><p className="field-label">BIÊN TẬP PHỤ ĐỀ</p><span className="muted">Tải SRT khác để ghi đè, hoặc sửa từng câu rồi duyệt.</span></div>
-            <div className="admin-actions"><button className="secondary-button" disabled={Boolean(busy) || cues.length === 0} onClick={() => void saveCues(false)}>Lưu nháp</button><button className="primary-button" disabled={Boolean(busy) || cues.length === 0} onClick={() => void saveCues(true)}>Lưu và duyệt</button></div>
+            <div className="admin-actions">
+              {missingTracks.length > 0 && <button className="secondary-button" disabled={Boolean(busy) || preview.status === 'processing'} onClick={() => void run('generate', () => api.generate(preview.video_id), 'Đã bắt đầu tạo tất cả phụ đề còn thiếu.')}>
+                {preview.status === 'processing' ? 'AI đang tạo phụ đề…' : `Tạo ${missingTracks.length} phụ đề còn thiếu bằng AI`}
+              </button>}
+              <button className="secondary-button" disabled={Boolean(busy) || cues.length === 0} onClick={() => void saveCues(false)}>Lưu nháp</button><button className="primary-button" disabled={Boolean(busy) || cues.length === 0} onClick={() => void saveCues(true)}>Lưu và duyệt</button>
+            </div>
           </div>
+          {preview.status === 'processing' && <section className="translation-progress" aria-live="polite" aria-label="Tiến độ tạo phụ đề bằng AI">
+            <div className="translation-progress-heading"><strong>Đang tạo phụ đề bằng AI</strong><span>{translationProgress}%</span></div>
+            <div className="progress-track" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={translationProgress} aria-label={`Tiến độ tạo phụ đề: ${translationProgress}%`}><div className="progress-bar" style={{ width: `${translationProgress}%` }} /></div>
+            <div className="translation-progress-languages">
+              {translatingTracks.map(language => <span key={language.code}>{language.flag} {language.short.toUpperCase()} · {progressForLanguage(language.code)}%</span>)}
+            </div>
+            <p className="muted">Các ngôn ngữ thiếu đang được dịch đồng thời. Bản dịch là bản nháp và cần duyệt trước khi xuất bản.</p>
+          </section>}
           <div className="language-chips" style={{ marginBottom: 16 }}>
             {LANGUAGES.map(language => {
               const track = preview.languages.find(item => item.language_code === language.code)

@@ -461,9 +461,16 @@ async def generate_video(
     source = await repo.get_video_language(video_id, "vi-VN")
     if not source or not await repo.list_segments(source.id):
         raise HTTPException(status_code=400, detail="Vietnamese SRT is required")
+    languages = {item.language_code: item for item in await repo.list_video_languages(video_id)}
+    missing_languages = [
+        code for code in SUPPORTED_LANGUAGES
+        if code != "vi-VN" and (code not in languages or not languages[code].subtitle_key)
+    ]
+    if not missing_languages:
+        return GenerateResponse(message="All subtitle drafts already exist", video_id=video_id)
     await repo.update_video(video_id, status=VideoStatus.PROCESSING)
-    start_subtitle_pipeline(str(video_id))
-    return GenerateResponse(message="Draft translation started", video_id=video_id)
+    start_subtitle_pipeline(str(video_id), missing_languages)
+    return GenerateResponse(message="Draft translations started", video_id=video_id)
 
 
 @router.post("/videos/{video_id}/regenerate/{lang_code}", response_model=GenerateResponse, status_code=202)

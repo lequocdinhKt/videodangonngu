@@ -107,3 +107,28 @@ async def test_upload_validation_and_qr(app_client, memory_repo):
         json={"kind": "video", "filename": "bad.mov", "content_type": "video/quicktime", "size_bytes": 20},
     )
     assert invalid.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_generate_only_starts_missing_subtitle_languages(app_client, memory_repo, monkeypatch):
+    headers = await _login(app_client, memory_repo)
+    user = await memory_repo.get_user_by_email("admin@test.local")
+    video = await memory_repo.create_video("Nguồn", "", user.id)
+    source = await memory_repo.create_video_language(video.id, "vi-VN")
+    await memory_repo.create_segments([{
+        "video_language_id": str(source.id), "sequence": 1,
+        "start_ms": 0, "end_ms": 1000, "source_text": "Xin chào", "translated_text": "Xin chào",
+    }])
+    existing = await memory_repo.create_video_language(video.id, "ru-RU")
+    await memory_repo.update_video_language(existing.id, subtitle_key="video/x/subtitle/ru.vtt")
+
+    import app.api.routes.admin as admin_routes
+    started: list[list[str]] = []
+    monkeypatch.setattr(admin_routes, "validate_translation_config", lambda: None)
+    monkeypatch.setattr(admin_routes, "is_subtitle_pipeline_active", lambda _: False)
+    monkeypatch.setattr(admin_routes, "start_subtitle_pipeline", lambda _, codes: started.append(codes))
+
+    response = await app_client.post(f"/api/admin/videos/{video.id}/generate", headers=headers)
+
+    assert response.status_code == 202, response.text
+    assert started == [["en-US", "zh-CN"]]

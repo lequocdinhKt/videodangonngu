@@ -1,7 +1,8 @@
 """Background subtitle-only translation pipeline.
 
-Audio/TTS processing intentionally does not run here. Generated translations are
-drafts and remain in ``ready_for_review`` until an admin approves them.
+Generated translations remain drafts in ``ready_for_review`` until an admin
+approves them. Target languages run concurrently to shorten the wait, while
+batches within each language stay sequential to avoid provider rate limits.
 """
 
 from __future__ import annotations
@@ -29,8 +30,8 @@ def is_subtitle_pipeline_active(video_id: str) -> bool:
     return task is not None and not task.done()
 
 
-async def _write_vtt(video_id, lang, segments, storage, repo) -> None:
-    short = lang.language_code.split("-")[0]
+async def _write_vtt(video_id, language, segments, storage, repo) -> None:
+    short = language.language_code.split("-")[0]
     key = f"video/{video_id}/subtitle/{short}.vtt"
     data = segments_to_vtt([
         {
@@ -42,11 +43,52 @@ async def _write_vtt(video_id, lang, segments, storage, repo) -> None:
         for item in segments
     ])
     await storage.save_file(key, data.encode("utf-8"))
-    await repo.update_video_language(
-        lang.id,
-        subtitle_key=key,
-        status=LanguageStatus.READY_FOR_REVIEW,
-    )
+    await repo.update_video_language(language.id, subtitle_key=key, status=LanguageStatus.READY_FOR_REVIEW)
+
+
+async def _translate_language(*, video_id, run_id, video, source_segments, language_code, provider, repo, storage) -> bool:
+    """Translate one target language and persist determinate batch progress."""
+    language = await repo.get_video_language(video_id, language_code)
+    if not language:
+        language = await repo.create_video_language(video_id, language_code)
+    await repo.update_video_language(language.id, status=LanguageStatus.PROCESSING)
+    await repo.upsert_job(video_id, run_id, "translate", language_code, JobStatus.RUNNING, 0)
+
+    try:
+        translated = []
+        total_segments = len(source_segments)
+        for offset in range(0, total_segments, BATCH_SIZE):
+            batch = source_segments[offset:offset + BATCH_SIZE]
+            outputs = await provider.translate_batch(
+                [SegmentInput(sequence=item.sequence, start_ms=item.start_ms, end_ms=item.end_ms,
+                              source_text=item.source_text or item.translated_text) for item in batch],
+                TranslationContext(title=video.title, description=video.description, target_language=language_code),
+            )
+            translated.extend(outputs)
+            await repo.upsert_job(
+                video_id, run_id, "translate", language_code, JobStatus.RUNNING,
+                min(90, round(len(translated) / total_segments * 90)),
+            )
+
+        await repo.delete_segments_for_language(language.id)
+        await repo.create_segments([
+            {"video_language_id": str(language.id), "sequence": item.sequence,
+             "start_ms": item.start_ms, "end_ms": item.end_ms,
+             "source_text": item.source_text, "translated_text": item.translated_text}
+            for item in translated
+        ])
+        language.segments = await repo.list_segments(language.id)
+        await _write_vtt(video_id, language, language.segments, storage, repo)
+        await repo.upsert_job(video_id, run_id, "translate", language_code, JobStatus.COMPLETED, 100)
+        return True
+    except Exception as exc:
+        logger.exception("Subtitle translation failed for %s / %s", video_id, language_code)
+        detail = str(exc)
+        if getattr(exc, "status_code", None) == 429 or "rate limit" in detail.lower():
+            detail = "Groq rate limit reached. Please wait and try again, or upload an SRT manually."
+        await repo.update_video_language(language.id, status=LanguageStatus.FAILED)
+        await repo.upsert_job(video_id, run_id, "translate", language_code, JobStatus.FAILED, 0, detail)
+        return False
 
 
 async def run_subtitle_pipeline(video_id: str, language_codes: list[str] | None = None) -> None:
@@ -56,87 +98,37 @@ async def run_subtitle_pipeline(video_id: str, language_codes: list[str] | None 
     run_id = uuid.uuid4()
     targets = [code for code in (language_codes or TARGET_LANGUAGES) if code != "vi-VN"]
 
-    current_language: str | None = None
     try:
         video = await repo.get_video(vid)
         if not video:
             raise ValueError("Video not found")
-        source_lang = await repo.get_video_language(vid, "vi-VN")
-        if not source_lang:
+        source_language = await repo.get_video_language(vid, "vi-VN")
+        if not source_language:
             raise ValueError("Vietnamese subtitle track is missing")
-        source_segments = await repo.list_segments(source_lang.id)
+        source_segments = await repo.list_segments(source_language.id)
         if not source_segments:
             raise ValueError("Vietnamese subtitle has no cues")
+        if not targets:
+            await repo.update_video(vid, status=VideoStatus.READY_FOR_REVIEW)
+            return
 
         provider = get_translation_provider()
-        total_targets = max(len(targets), 1)
-        for target_index, code in enumerate(targets):
-            current_language = code
-            target = await repo.get_video_language(vid, code)
-            if not target:
-                target = await repo.create_video_language(vid, code)
-            await repo.update_video_language(target.id, status=LanguageStatus.PROCESSING)
-            await repo.upsert_job(
-                vid, run_id, "translate", code, JobStatus.RUNNING,
-                10 + int(target_index / total_targets * 70),
-            )
-
-            translated = []
-            for offset in range(0, len(source_segments), BATCH_SIZE):
-                batch = source_segments[offset:offset + BATCH_SIZE]
-                outputs = await provider.translate_batch(
-                    [
-                        SegmentInput(
-                            sequence=item.sequence,
-                            start_ms=item.start_ms,
-                            end_ms=item.end_ms,
-                            source_text=item.source_text or item.translated_text,
-                        )
-                        for item in batch
-                    ],
-                    TranslationContext(
-                        title=video.title,
-                        description=video.description,
-                        target_language=code,
-                    ),
-                )
-                translated.extend(outputs)
-
-            await repo.delete_segments_for_language(target.id)
-            await repo.create_segments([
-                {
-                    "video_language_id": str(target.id),
-                    "sequence": item.sequence,
-                    "start_ms": item.start_ms,
-                    "end_ms": item.end_ms,
-                    "source_text": item.source_text,
-                    "translated_text": item.translated_text,
-                }
-                for item in translated
-            ])
-            target.segments = await repo.list_segments(target.id)
-            await _write_vtt(vid, target, target.segments, storage, repo)
-            await repo.upsert_job(
-                vid, run_id, "translate", code, JobStatus.COMPLETED,
-                20 + int((target_index + 1) / total_targets * 70),
-            )
-
-        await repo.update_video(vid, status=VideoStatus.READY_FOR_REVIEW)
-        await repo.upsert_job(vid, run_id, "finalize", None, JobStatus.COMPLETED, 100)
-    except Exception as exc:
-        logger.exception("Subtitle translation failed for %s", video_id)
-        detail = str(exc)
-        status_code = getattr(exc, "status_code", None)
-        if status_code == 429 or "rate limit" in detail.lower():
-            detail = "Groq rate limit reached. Please wait and try again, or upload an SRT manually."
-        if current_language:
-            language = await repo.get_video_language(vid, current_language)
-            if language:
-                await repo.update_video_language(language.id, status=LanguageStatus.FAILED)
-        await repo.update_video(vid, status=VideoStatus.FAILED)
+        results = await asyncio.gather(*[
+            _translate_language(video_id=vid, run_id=run_id, video=video, source_segments=source_segments,
+                                language_code=code, provider=provider, repo=repo, storage=storage)
+            for code in targets
+        ])
+        all_succeeded = all(results)
+        await repo.update_video(vid, status=VideoStatus.READY_FOR_REVIEW if all_succeeded else VideoStatus.REQUIRES_REVIEW)
         await repo.upsert_job(
-            vid, run_id, "translate", current_language, JobStatus.FAILED, 0, detail
+            vid, run_id, "finalize", None,
+            JobStatus.COMPLETED if all_succeeded else JobStatus.FAILED,
+            100, None if all_succeeded else "One or more subtitle translations failed.",
         )
+    except Exception as exc:
+        logger.exception("Subtitle translation pipeline failed for %s", video_id)
+        await repo.update_video(vid, status=VideoStatus.FAILED)
+        await repo.upsert_job(vid, run_id, "finalize", None, JobStatus.FAILED, 0, str(exc))
 
 
 def start_subtitle_pipeline(video_id: str, language_codes: list[str] | None = None) -> None:
