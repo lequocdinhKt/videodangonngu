@@ -4,10 +4,33 @@ import type { LanguageCode, Video } from '../../types'
 import { LANGUAGES, UI_COPY } from '../../types'
 
 interface Props { video: Video; initialLanguage: LanguageCode }
+interface SubtitleCue { start: number; end: number; text: string }
 
 function formatTime(seconds: number) {
   if (!Number.isFinite(seconds) || seconds < 0) return '0:00'
   return `${Math.floor(seconds / 60)}:${Math.floor(seconds % 60).toString().padStart(2, '0')}`
+}
+
+function parseVttTimestamp(value: string) {
+  const parts = value.trim().split(':').map(Number)
+  if (parts.some(part => !Number.isFinite(part))) return NaN
+  const seconds = parts.pop() || 0
+  const minutes = parts.pop() || 0
+  const hours = parts.pop() || 0
+  return hours * 3600 + minutes * 60 + seconds
+}
+
+function parseVtt(content: string): SubtitleCue[] {
+  return content.replace(/^\uFEFF/, '').replace(/\r/g, '').split(/\n{2,}/).flatMap(block => {
+    const lines = block.split('\n')
+    const timingIndex = lines.findIndex(line => line.includes('-->'))
+    if (timingIndex < 0) return []
+    const [startValue, endValue] = lines[timingIndex].split('-->').map(value => value.trim().split(/\s+/)[0])
+    const start = parseVttTimestamp(startValue)
+    const end = parseVttTimestamp(endValue)
+    const text = lines.slice(timingIndex + 1).join('\n').replace(/<[^>]*>/g, '').trim()
+    return Number.isFinite(start) && Number.isFinite(end) && end > start && text ? [{ start, end, text }] : []
+  })
 }
 
 function PlayIcon({ paused }: { paused: boolean }) {
@@ -26,7 +49,6 @@ function ChevronIcon() { return <svg viewBox="0 0 24 24" aria-hidden><path d="m9
 export default function VideoPlayer({ video, initialLanguage }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
-  const trackRef = useRef<HTMLTrackElement>(null)
   const settingsButtonRef = useRef<HTMLButtonElement>(null)
   const settingsPanelRef = useRef<HTMLDivElement>(null)
   const hideControlsTimer = useRef<number | undefined>(undefined)
@@ -34,7 +56,7 @@ export default function VideoPlayer({ video, initialLanguage }: Props) {
   const [subtitlesEnabled, setSubtitlesEnabled] = useState(true)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [settingsView, setSettingsView] = useState<'root' | 'subtitles' | 'speed'>('root')
-  const [trackUrl, setTrackUrl] = useState<string | null>(null)
+  const [subtitleCues, setSubtitleCues] = useState<SubtitleCue[]>([])
   const [playing, setPlaying] = useState(false)
   const [controlsVisible, setControlsVisible] = useState(true)
   const [currentTime, setCurrentTime] = useState(0)
@@ -56,23 +78,16 @@ export default function VideoPlayer({ video, initialLanguage }: Props) {
   useEffect(() => { if (available.length > 0 && !available.some(item => item.code === subtitleLanguage)) setSubtitleLanguage((available[0]?.code || 'vi-VN') as LanguageCode) }, [available, subtitleLanguage])
   useEffect(() => {
     const source = video.languages.find(item => item.language_code === subtitleLanguage)?.subtitle_url
-    if (!source || !subtitlesEnabled) { setTrackUrl(null); return }
-    let currentUrl: string | null = null
-    let cancelled = false
-    fetch(source).then(response => { if (!response.ok) throw new Error('Subtitle unavailable'); return response.blob() }).then(blob => {
-      if (cancelled) return
-      currentUrl = URL.createObjectURL(blob)
-      setTrackUrl(currentUrl)
-    }).catch(() => setTrackUrl(null))
-    return () => { cancelled = true; if (currentUrl) URL.revokeObjectURL(currentUrl) }
+    if (!source || !subtitlesEnabled) { setSubtitleCues([]); return }
+    const controller = new AbortController()
+    fetch(source, { signal: controller.signal })
+      .then(response => { if (!response.ok) throw new Error('Subtitle unavailable'); return response.text() })
+      .then(content => setSubtitleCues(parseVtt(content)))
+      .catch(error => { if (!(error instanceof DOMException && error.name === 'AbortError')) setSubtitleCues([]) })
+    return () => controller.abort()
   }, [subtitleLanguage, subtitlesEnabled, video.languages])
   useEffect(() => { setPlaying(false); setCurrentTime(0); setDuration((video.duration_ms || 0) / 1000); setControlsVisible(true); setSettingsOpen(false); setSettingsView('root') }, [video.duration_ms, video.video_url])
   useEffect(() => { if (videoRef.current) videoRef.current.playbackRate = playbackRate }, [playbackRate])
-  useEffect(() => {
-    // A dynamically inserted <track> is disabled by some browsers unless its
-    // TextTrack mode is explicitly changed from "disabled" to "showing".
-    if (trackUrl && trackRef.current) trackRef.current.track.mode = 'showing'
-  }, [trackUrl])
   useEffect(() => { if (settingsOpen) settingsPanelRef.current?.focus() }, [settingsOpen])
 
   const togglePlayback = async () => {
@@ -115,12 +130,13 @@ export default function VideoPlayer({ video, initialLanguage }: Props) {
   const volumeLabel = initialLanguage === 'vi-VN' ? 'Âm lượng' : initialLanguage === 'ru-RU' ? 'Громкость' : initialLanguage === 'zh-CN' ? '音量' : 'Volume'
   const backLabel = initialLanguage === 'vi-VN' ? 'Quay lại cài đặt' : initialLanguage === 'ru-RU' ? 'Назад к настройкам' : initialLanguage === 'zh-CN' ? '返回设置' : 'Back to settings'
   const selectedSubtitle = subtitlesEnabled ? LANGUAGES.find(item => item.code === subtitleLanguage)?.nativeLabel || copy.subtitlesOff : copy.subtitlesOff
+  const activeCue = subtitlesEnabled ? subtitleCues.find(cue => currentTime >= cue.start && currentTime <= cue.end) : undefined
 
   return <div ref={containerRef} className={`video-shell custom-video-player ${hasVideo ? '' : 'is-preview'} ${controlsVisible || !playing || settingsOpen ? 'controls-visible' : 'controls-hidden'}`} onContextMenu={event => event.preventDefault()} onKeyDown={handleKeyboard} onPointerMove={revealControls} onFocusCapture={revealControls} tabIndex={0}>
     <div className="video-stage" onClick={() => void togglePlayback()}>
       <video ref={videoRef} src={video.video_url || undefined} poster={video.thumbnail_url || undefined} preload="metadata" controlsList="nodownload noremoteplayback" disablePictureInPicture playsInline className="video-element" onPlay={() => { setPlaying(true); revealControls() }} onPause={() => { setPlaying(false); setControlsVisible(true) }} onTimeUpdate={event => setCurrentTime(event.currentTarget.currentTime)} onLoadedMetadata={event => setDuration(event.currentTarget.duration || 0)} onEnded={() => { setPlaying(false); setControlsVisible(true) }}>
-        {trackUrl && <track ref={trackRef} key={trackUrl} src={trackUrl} kind="subtitles" srcLang={subtitleLanguage.split('-')[0]} label={LANGUAGES.find(item => item.code === subtitleLanguage)?.nativeLabel} default onLoad={event => { event.currentTarget.track.mode = 'showing' }} />}
       </video>
+      {activeCue && <div className="player-caption" lang={subtitleLanguage} aria-live="off">{activeCue.text}</div>}
       {!playing && <button type="button" className="player-center-button" onClick={event => { event.stopPropagation(); void togglePlayback() }} disabled={!hasVideo} aria-label={copy.play}><PlayIcon paused /></button>}
       {!hasVideo && <div className="player-preview-label"><span />{copy.videoComingSoon}</div>}
     </div>
@@ -140,8 +156,7 @@ export default function VideoPlayer({ video, initialLanguage }: Props) {
           <button type="button" className={`player-control-button cc-button ${subtitlesEnabled ? 'is-active' : ''}`} onClick={() => { setSubtitlesEnabled(enabled => !enabled); revealControls() }} disabled={available.length === 0} aria-label={copy.subtitles} aria-pressed={subtitlesEnabled}>CC</button>
           <div className="settings-control-wrap">
             {settingsOpen && <>
-              <button type="button" className="player-settings-backdrop" onClick={closeSettings} aria-label={initialLanguage === 'vi-VN' ? 'Đóng cài đặt video' : 'Close video settings'} />
-              <div ref={settingsPanelRef} className="player-settings-menu" role="dialog" aria-modal="true" aria-label={settingsLabel} tabIndex={-1}>
+              <div ref={settingsPanelRef} className="player-settings-menu" role="dialog" aria-label={settingsLabel} tabIndex={-1}>
                 <div className="player-settings-grabber" aria-hidden />
                 <div className="player-settings-heading">
                   {settingsView === 'root' ? <span>{settingsLabel}</span> : <><button type="button" className="player-settings-back" onClick={() => setSettingsView('root')} aria-label={backLabel}><BackIcon /></button><span>{settingsView === 'subtitles' ? copy.subtitles : speedLabel}</span></>}
