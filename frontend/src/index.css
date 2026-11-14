@@ -1208,3 +1208,53 @@ button { cursor: pointer; }
   .heritage-story-list { gap:20px; }
   .heritage-story-card { grid-template-columns:1fr; border-radius:20px; }
 }
+
+/* Detail page: keep the player and its metadata balanced side by side on web. */
+.heritage-video-layout {
+  width:min(1240px,calc(100% - 40px));
+  display:grid;
+  grid-template-columns:minmax(0,1.65fr) minmax(320px,.85fr);
+  gap:clamp(32px,4vw,58px);
+  align-items:center;
+  margin:0 auto;
+  padding-bottom:56px;
+}
+
+.heritage-video-layout .video-shell,
+.heritage-video-layout .heritage-video-copy {
+  width:100%;
+  margin:0;
+}
+
+.heritage-video-layout .heritage-video-copy {
+  padding:0;
+  text-align:left;
+}
+
+.heritage-video-layout .heritage-video-copy h2 {
+  margin:0;
+  font-size:clamp(25px,2.5vw,38px);
+  line-height:1.18;
+}
+
+.heritage-video-layout .heritage-video-copy > p {
+  margin:16px 0 0;
+  font-size:15px;
+  line-height:1.7;
+}
+
+@media (max-width: 820px) {
+  .heritage-video-layout {
+    width:calc(100% - 28px);
+    grid-template-columns:1fr;
+    gap:24px;
+    padding-bottom:44px;
+  }
+
+  .heritage-video-layout .heritage-video-copy { padding:0; }
+}
+
+@media (max-width: 520px) {
+  .heritage-video-layout { width:100%; }
+  .heritage-video-layout .heritage-video-copy { width:calc(100% - 28px); margin:0 auto; }
+}

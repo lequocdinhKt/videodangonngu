@@ -44,13 +44,15 @@ export default function VideoDetailPage() {
       </header>
 
       {!loaded && <div className="state-card"><span className="spinner" /><p>{copy.loading}</p></div>}
-      {video && <>
-        <VideoPlayer video={video} initialLanguage={language} />
-        <section className="heritage-video-copy" aria-labelledby="video-information-title">
-          <h2 id="video-information-title">{video.title}</h2>
-          <p>{video.description}</p>
-        </section>
-      </>}
+      {video && (
+        <div className="heritage-video-layout">
+          <VideoPlayer video={video} initialLanguage={language} />
+          <section className="heritage-video-copy" aria-labelledby="video-information-title">
+            <h2 id="video-information-title">{video.title}</h2>
+            <p>{video.description}</p>
+          </section>
+        </div>
+      )}
     </main>
   )
 }
