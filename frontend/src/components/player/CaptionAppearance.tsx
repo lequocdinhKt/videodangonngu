@@ -51,10 +51,15 @@ function moveRadioSelection<T extends string>(event: KeyboardEvent<HTMLInputElem
 export function CaptionOverlay({ preferences, nativeFullscreen }: OverlayProps) {
   const captions = useCaptionsOptions()
   const activeCues = useActiveTextCues({ kind: ['captions', 'subtitles'] })
+  const controlsVisible = usePlayer(state => state.controlsVisible)
 
   if (nativeFullscreen || !captions?.state.subtitlesShowing || !activeCues.length) return null
 
-  return <div className={`caption-overlay caption-overlay-${preferences.position} caption-overlay-${preferences.fontSize}`} aria-hidden="true">
+  return <div
+    className={`caption-overlay caption-overlay-${preferences.position} caption-overlay-${preferences.fontSize}`}
+    data-controls-visible={controlsVisible || undefined}
+    aria-hidden="true"
+  >
     <div className="caption-overlay-stack">
       {activeCues.map(cue => <span className="caption-overlay-cue" key={`${cue.id}-${cue.startTime}`}>
         {cue.text}
