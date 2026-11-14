@@ -3,12 +3,13 @@ import { Link } from 'react-router-dom'
 import PublicHeader from '../../components/public/PublicHeader'
 import { DECODE_COPY, HERITAGE_COPY, getHeritageChapter, localizeHeritageVideo } from '../../content/heritageContent'
 import { api, formatDuration } from '../../services/api'
-import { UI_COPY, type LanguageCode, type Video } from '../../types'
+import { usePreferredLanguage } from '../../services/language'
+import { UI_COPY, type Video } from '../../types'
 
 const CHAPTER_SLUG = 'giai-ma-ma-nhai'
 
 export default function DecodeLibraryPage() {
-  const language = (localStorage.getItem('preferredLanguage') || 'vi-VN') as LanguageCode
+  const language = usePreferredLanguage()
   const copy = UI_COPY[language]
   const heritageCopy = HERITAGE_COPY[language]
   const decodeCopy = DECODE_COPY[language]

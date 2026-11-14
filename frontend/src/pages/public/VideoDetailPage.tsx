@@ -4,11 +4,12 @@ import PublicHeader from '../../components/public/PublicHeader'
 import VideoPlayer from '../../components/player/VideoPlayer'
 import { HERITAGE_COPY, getHeritageChapter, getHeritageChapterForProductionVideo, localizeHeritageVideo } from '../../content/heritageContent'
 import { api } from '../../services/api'
-import { LANGUAGES, UI_COPY, type LanguageCode, type Video } from '../../types'
+import { usePreferredLanguage } from '../../services/language'
+import { LANGUAGES, UI_COPY, type Video } from '../../types'
 
 export default function VideoDetailPage() {
   const { id } = useParams<{ id: string }>()
-  const language = (localStorage.getItem('preferredLanguage') || 'vi-VN') as LanguageCode
+  const language = usePreferredLanguage()
   const copy = UI_COPY[language]
   const heritageCopy = HERITAGE_COPY[language]
   const [video, setVideo] = useState<Video | null>(null)

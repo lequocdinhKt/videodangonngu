@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import PublicHeader from '../../components/public/PublicHeader'
+import projectPoster from '../../assets/ma-nhai-project-poster.jpg'
 import { HERITAGE_CHAPTERS, HERITAGE_COPY, PROJECT_INTRO, localizeHeritageVideo } from '../../content/heritageContent'
 import { api, formatDuration } from '../../services/api'
-import { UI_COPY, type LanguageCode, type Video } from '../../types'
+import { usePreferredLanguage } from '../../services/language'
+import { UI_COPY, type Video } from '../../types'
 
 export default function VideoLibraryPage() {
-  const language = (localStorage.getItem('preferredLanguage') || 'vi-VN') as LanguageCode
+  const language = usePreferredLanguage()
   const copy = UI_COPY[language]
   const heritageCopy = HERITAGE_COPY[language]
   const [videos, setVideos] = useState<Video[]>([])
@@ -35,14 +37,8 @@ export default function VideoLibraryPage() {
         <PublicHeader language={language} />
 
         <section className="heritage-hero project-intro-hero">
-          <figure className="project-poster project-poster-placeholder">
-            <div className="project-poster-empty" role="img" aria-label="Chưa có ảnh poster">
-              <svg viewBox="0 0 48 48" aria-hidden="true">
-                <path d="M8 7h32a4 4 0 0 1 4 4v26a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V11a4 4 0 0 1 4-4Z" />
-                <circle cx="34" cy="17" r="4" />
-                <path d="m5 34 11-11a3 3 0 0 1 4 0l8 8 4-4a3 3 0 0 1 4 0l8 8" />
-              </svg>
-            </div>
+          <figure className="project-poster">
+            <img src={projectPoster} alt="Poster giới thiệu dự án Ma nhai Ngũ Hành Sơn" />
           </figure>
           <div className="heritage-hero-copy project-intro-copy">
             <p className="heritage-eyebrow">{heritageCopy.eyebrow}</p>

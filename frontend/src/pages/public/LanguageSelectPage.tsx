@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { setPreferredLanguage } from '../../services/language'
 import { LANGUAGES, UI_COPY, type LanguageCode } from '../../types'
 
 export default function LanguageSelectPage() {
@@ -15,7 +16,7 @@ export default function LanguageSelectPage() {
 
   const copy = UI_COPY[selected]
   const handleContinue = () => {
-    localStorage.setItem('preferredLanguage', selected)
+    setPreferredLanguage(selected)
     navigate('/videos')
   }
 

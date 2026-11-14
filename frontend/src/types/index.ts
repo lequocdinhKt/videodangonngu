@@ -15,7 +15,7 @@ export const LANGUAGES: LanguageDefinition[] = [
   { code: 'vi-VN', label: 'Tiếng Việt', nativeLabel: 'Tiếng Việt', flag: '🇻🇳', short: 'vi' },
   { code: 'en-US', label: 'English', nativeLabel: 'English', flag: '🇬🇧', short: 'en' },
   { code: 'ru-RU', label: 'Russian', nativeLabel: 'Русский', flag: '🇷🇺', short: 'ru' },
-  { code: 'zh-CN', label: 'Chinese', nativeLabel: '中文（简体）', flag: '🇨🇳', short: 'zh' },
+  { code: 'zh-CN', label: 'Chinese', nativeLabel: '中文 (简体)', flag: '🇨🇳', short: 'zh' },
 ]
 
 export const UI_COPY: Record<LanguageCode, Record<string, string>> = {

@@ -490,6 +490,20 @@ button { cursor: pointer; }
 .project-intro-text p { max-width:660px; margin:0; color:var(--heritage-muted); font-size:15px; line-height:1.78; }
 .project-intro-copy .heritage-scroll-link { margin-top:30px; }
 
+/* Supplied project poster: retain its complete vertical artwork without cropping. */
+.project-poster {
+  aspect-ratio:1587 / 2245;
+  background:var(--heritage-paper);
+  border:0;
+  border-radius:10px;
+  box-shadow:0 10px 28px rgba(16,46,43,.11);
+}
+
+.project-poster > img {
+  object-fit:contain;
+  transform:none;
+}
+
 /* Decode index: one focused, YouTube-like result before the full player. */
 .decode-page { min-height:100vh; padding-bottom:88px; }
 .decode-page > .detail-breadcrumb,.decode-heading,.decode-results { width:min(1120px,calc(100% - 40px)); margin-right:auto; margin-left:auto; }
@@ -562,7 +576,15 @@ button { cursor: pointer; }
 .heritage-seal { width:48px; height:48px; flex:0 0 auto; display:grid; place-items:center; color:#fff; background:var(--heritage-red); border:1px solid rgba(86,34,25,.2); border-radius:14px; font-family:Georgia,"Times New Roman",serif; font-size:24px; box-shadow:inset 0 0 0 4px rgba(255,255,255,.14); }
 .heritage-seal.mini { width:38px; height:38px; border-radius:11px; font-size:18px; }
 .heritage-header-actions { display:flex; align-items:center; gap:10px; }
-.heritage-language { min-height:42px; display:flex; align-items:center; gap:8px; padding:0 14px; background:#fff; border:1px solid var(--heritage-line); border-radius:999px; color:#40554f; font-size:12px; font-weight:750; }
+.heritage-language-picker { position:relative; }
+.heritage-language { min-height:42px; display:flex; align-items:center; gap:8px; padding:0 14px; background:#fff; border:1px solid var(--heritage-line); border-radius:999px; color:#40554f; font-size:12px; font-weight:750; box-shadow:0 4px 14px rgba(16,46,43,.04); }
+.heritage-language:hover { border-color:#abc8c1; background:#f9fcfb; }
+.heritage-language[aria-expanded="true"] { border-color:var(--heritage-accent); background:#eef8f5; }
+.language-popover { position:absolute; z-index:30; top:calc(100% + 8px); right:0; width:min(184px,calc(100vw - 28px)); padding:6px; background:#fff; border:1px solid var(--heritage-line); border-radius:12px; box-shadow:0 14px 34px rgba(16,46,43,.14); }
+.language-popover button { width:100%; min-height:44px; display:flex; align-items:center; gap:10px; padding:8px 10px; color:var(--heritage-ink); background:transparent; border:0; border-radius:8px; font:inherit; font-size:14px; font-weight:650; text-align:left; }
+.language-popover button:hover,.language-popover button:focus-visible { background:#f1f8f5; }
+.language-popover button.is-selected { color:#0f5f58; background:#e5f4ef; }
+.language-popover button > span:first-child { width:22px; flex:0 0 22px; font-size:18px; line-height:1; }
 .heritage-menu-wrap { position:relative; }
 .menu-trigger { width:44px; height:44px; display:grid; place-content:center; gap:5px; padding:0; background:var(--heritage-ink); border:0; border-radius:14px; box-shadow:0 8px 20px rgba(16,46,43,.14); }
 .menu-trigger span { width:18px; height:2px; background:#fff; border-radius:2px; transition:.2s ease; }
@@ -683,7 +705,7 @@ button { cursor: pointer; }
 .project-intro-hero h1 { max-width:780px; font-size:clamp(44px,5vw,70px); line-height:1.02; }
 .decode-heading { padding:56px 0 46px; }
 .decode-heading h1 { font-size:clamp(48px,7vw,84px); line-height:.98; }
-.decode-question { max-width:820px; margin-top:28px; font-size:clamp(23px,2.8vw,36px); line-height:1.24; }
+.decode-question { max-width:820px; margin-top:28px; font-size:clamp(23px,2.8vw,36px); font-weight:400; line-height:1.24; }
 .decode-video-card { grid-template-columns:minmax(280px,38%) minmax(0,1fr); align-items:center; }
 .decode-video-copy h2 { font-size:clamp(24px,3vw,36px); line-height:1.16; }
 .heritage-detail-page { padding-bottom:54px; }
@@ -803,10 +825,13 @@ button { cursor: pointer; }
     content:"";
   }
 
-  .project-poster-placeholder {
+  .project-poster {
     float:left;
-    width:142px;
-    margin:0 16px 12px 0;
+    width:46%;
+    max-width:none;
+    margin:0 14px 12px 0;
+    border-radius:9px;
+    box-shadow:0 8px 22px rgba(16,46,43,.1);
   }
 
   .project-intro-copy {
@@ -819,7 +844,8 @@ button { cursor: pointer; }
   }
 
   .project-intro-hero h1 {
-    line-height:1.12;
+    font-size:clamp(23px,6.7vw,27px);
+    line-height:1.08;
     letter-spacing:-.025em;
   }
 
