@@ -2,6 +2,7 @@ export type VideoStatus = 'draft' | 'processing' | 'ready_for_review' | 'publish
 export type LanguageStatus = 'pending' | 'processing' | 'ready_for_review' | 'completed' | 'failed'
 export type JobStatus = 'pending' | 'running' | 'completed' | 'failed'
 export type LanguageCode = 'vi-VN' | 'en-US' | 'ru-RU' | 'zh-CN'
+export type PublicVideoSlot = 'chapter-1' | 'chapter-2'
 
 export interface LanguageDefinition {
   code: LanguageCode
@@ -100,6 +101,11 @@ export interface Video {
   translations: VideoTranslation[]
   created_at: string
   updated_at: string
+}
+
+export interface VideoSlot {
+  slot_key: PublicVideoSlot
+  video: Video | null
 }
 
 export interface ProcessingJob {

@@ -2,10 +2,10 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import PublicHeader from '../../components/public/PublicHeader'
 import VideoPlayer from '../../components/player/VideoPlayer'
-import { HERITAGE_COPY, getHeritageChapter, getHeritageChapterForProductionVideo, localizeHeritageVideo } from '../../content/heritageContent'
+import { HERITAGE_COPY, getHeritageChapter } from '../../content/heritageContent'
 import { api } from '../../services/api'
 import { usePreferredLanguage } from '../../services/language'
-import { LANGUAGES, UI_COPY, type Video } from '../../types'
+import { UI_COPY, type Video } from '../../types'
 
 export default function VideoDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -13,33 +13,22 @@ export default function VideoDetailPage() {
   const copy = UI_COPY[language]
   const heritageCopy = HERITAGE_COPY[language]
   const [video, setVideo] = useState<Video | null>(null)
-  const chapter = getHeritageChapter(id) || (id ? getHeritageChapterForProductionVideo(id) : undefined)
-  const previewVideo: Video | null = chapter ? {
-    id: chapter.productionVideoId || chapter.slug,
-    title: chapter.title[language],
-    description: chapter.description[language],
-    status: 'published',
-    duration_ms: null,
-    thumbnail_url: chapter.thumbnail,
-    video_url: null,
-    languages: LANGUAGES.map(item => ({ language_code: item.code, subtitle_url: null, status: 'pending' })),
-    translations: [],
-    created_at: '',
-    updated_at: '',
-  } : null
-  const shownVideo = video || previewVideo
+  const [loaded, setLoaded] = useState(false)
+  const chapter = getHeritageChapter(id)
 
   const load = useCallback(() => {
-    if (!chapter?.productionVideoId) return
-    api.getVideo(chapter.productionVideoId, language)
-      .then(current => setVideo(localizeHeritageVideo(current, language)))
+    if (!chapter) return
+    setLoaded(false)
+    api.listPublicVideoSlots(language)
+      .then(data => setVideo(data.items.find(slot => slot.slot_key === chapter.slotKey)?.video || null))
       .catch(() => setVideo(null))
-  }, [chapter?.productionVideoId, language])
+      .finally(() => setLoaded(true))
+  }, [chapter, language])
 
   useEffect(() => { load() }, [load])
 
   if (!chapter) return <main className="heritage-page"><div className="state-card"><p>{copy.empty}</p><Link to="/videos" className="secondary-button">{heritageCopy.home}</Link></div></main>
-  if (!chapter.productionVideoId) return <main className="heritage-page"><div className="state-card error-state" role="status"><strong>{copy.videoComingSoon}</strong><p>{copy.videoNotBound}</p><Link to="/videos" className="secondary-button">{heritageCopy.home}</Link></div></main>
+  if (loaded && !video) return <main className="heritage-page"><div className="state-card error-state" role="status"><strong>{copy.videoComingSoon}</strong><p>{copy.videoNotBound}</p><Link to="/videos" className="secondary-button">{heritageCopy.home}</Link></div></main>
 
   return (
     <main className="heritage-page heritage-detail-page">
@@ -54,9 +43,8 @@ export default function VideoDetailPage() {
         <h1>{chapter.menuLabel[language]}</h1>
       </header>
 
-      {shownVideo && <>
-        <VideoPlayer video={shownVideo} initialLanguage={language} />
-      </>}
+      {!loaded && <div className="state-card"><span className="spinner" /><p>{copy.loading}</p></div>}
+      {video && <VideoPlayer video={video} initialLanguage={language} />}
     </main>
   )
 }

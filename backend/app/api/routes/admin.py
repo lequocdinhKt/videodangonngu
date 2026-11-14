@@ -38,6 +38,9 @@ from app.schemas.video import (
     VideoLanguageResponse,
     VideoListResponse,
     VideoResponse,
+    VideoSlotListResponse,
+    VideoSlotResponse,
+    VideoSlotUpdate,
     VideoTranslationResponse,
 )
 from app.services.audio.ffmpeg_service import FFmpegService
@@ -53,6 +56,7 @@ router = APIRouter(prefix="/api/admin", tags=["admin"])
 
 LANG_CODE_MAP = {"vi": "vi-VN", "en": "en-US", "ru": "ru-RU", "zh": "zh-CN"}
 SUPPORTED_LANGUAGES = tuple(LANG_CODE_MAP.values())
+PUBLIC_VIDEO_SLOTS = ("chapter-1", "chapter-2")
 ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 ALLOWED_SUBTITLE_TYPES = {
     "application/x-subrip",
@@ -238,6 +242,48 @@ async def list_videos(
         video.translations = await repo.list_video_translations(video.id)
         items.append(await _video_response(video, storage))
     return VideoListResponse(items=items, total=len(items))
+
+
+@router.get("/video-slots", response_model=VideoSlotListResponse)
+async def list_video_slots(
+    repo: Annotated[SupabaseRepository, Depends(get_repo)],
+    _: User = Depends(get_current_user),
+):
+    storage = get_storage()
+    assignments = await repo.list_public_video_slots()
+    items = []
+    for slot_key in PUBLIC_VIDEO_SLOTS:
+        video_id = assignments[slot_key]
+        video = await _load_video_relations(repo, video_id) if video_id else None
+        items.append(VideoSlotResponse(
+            slot_key=slot_key,
+            video=await _video_response(video, storage) if video else None,
+        ))
+    return VideoSlotListResponse(items=items)
+
+
+@router.put("/video-slots/{slot_key}", response_model=VideoSlotResponse)
+async def update_video_slot(
+    slot_key: str,
+    body: VideoSlotUpdate,
+    repo: Annotated[SupabaseRepository, Depends(get_repo)],
+    _: User = Depends(get_current_user),
+):
+    if slot_key not in PUBLIC_VIDEO_SLOTS:
+        raise HTTPException(status_code=404, detail="Unknown public video slot")
+    video = await _load_video_relations(repo, body.video_id) if body.video_id else None
+    if body.video_id and not video:
+        raise HTTPException(status_code=404, detail="Video not found")
+    if body.video_id:
+        assignments = await repo.list_public_video_slots()
+        assigned_slot = next((key for key, value in assignments.items() if value == body.video_id and key != slot_key), None)
+        if assigned_slot:
+            raise HTTPException(status_code=409, detail=f"Video is already assigned to {assigned_slot}")
+    await repo.set_public_video_slot(slot_key, body.video_id)
+    return VideoSlotResponse(
+        slot_key=slot_key,
+        video=await _video_response(video, get_storage()) if video else None,
+    )
 
 
 @router.post("/videos/draft", response_model=VideoCreateResponse, status_code=201)

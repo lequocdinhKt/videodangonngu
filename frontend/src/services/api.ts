@@ -1,8 +1,10 @@
 import type {
   LanguageCode,
   PreviewData,
+  PublicVideoSlot,
   SubtitleTrackEditor,
   Video,
+  VideoSlot,
   VideoTranslation,
 } from '../types'
 import { LANGUAGES } from '../types'
@@ -70,6 +72,10 @@ function normalizeVideo(video: Video): Video {
     thumbnail_url: absoluteMediaUrl(video.thumbnail_url),
     languages: video.languages.map(item => ({ ...item, subtitle_url: absoluteMediaUrl(item.subtitle_url) })),
   }
+}
+
+function normalizeSlot(slot: VideoSlot): VideoSlot {
+  return { ...slot, video: slot.video ? normalizeVideo(slot.video) : null }
 }
 
 async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
@@ -162,9 +168,16 @@ export const api = {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }),
   }),
   listVideos: () => request<{ items: Video[]; total: number }>(`${API}/admin/videos`).then(data => ({ ...data, items: data.items.map(normalizeVideo) })),
+  listAdminVideoSlots: () => request<{ items: VideoSlot[] }>(`${API}/admin/video-slots`).then(data => ({ items: data.items.map(normalizeSlot) })),
+  assignVideoSlot: (slot: PublicVideoSlot, videoId: string | null) => request<VideoSlot>(`${API}/admin/video-slots/${slot}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ video_id: videoId }),
+  }).then(normalizeSlot),
   listPublishedVideos: (lang: LanguageCode) => DEMO_MODE
     ? loadDemoVideos(lang).then(items => ({ items, total: items.length }))
     : request<{ items: Video[]; total: number }>(`${API}/videos?lang=${encodeURIComponent(lang)}`).then(data => ({ ...data, items: data.items.map(normalizeVideo) })),
+  listPublicVideoSlots: (lang: LanguageCode) => DEMO_MODE
+    ? loadDemoVideos(lang).then(items => ({ items: (['chapter-1', 'chapter-2'] as const).map((slot_key, index) => ({ slot_key, video: items[index] || null })) }))
+    : request<{ items: VideoSlot[] }>(`${API}/video-slots?lang=${encodeURIComponent(lang)}`).then(data => ({ items: data.items.map(normalizeSlot) })),
   getVideo: (id: string, lang: LanguageCode) => DEMO_MODE
     ? loadDemoVideos(lang).then(items => {
         const video = items.find(item => item.id === id)

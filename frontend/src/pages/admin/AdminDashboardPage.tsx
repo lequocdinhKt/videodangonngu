@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api, formatDate, formatDuration } from '../../services/api'
-import type { Video } from '../../types'
+import type { PublicVideoSlot, Video, VideoSlot } from '../../types'
 
 interface QRData { url: string; qr_image_base64: string; qr_svg_base64: string }
 
@@ -15,6 +15,9 @@ function downloadDataUrl(dataUrl: string, filename: string) {
 export default function AdminDashboardPage() {
   const navigate = useNavigate()
   const [videos, setVideos] = useState<Video[]>([])
+  const [slots, setSlots] = useState<VideoSlot[]>([])
+  const [slotChoices, setSlotChoices] = useState<Record<PublicVideoSlot, string>>({ 'chapter-1': '', 'chapter-2': '' })
+  const [savingSlot, setSavingSlot] = useState<PublicVideoSlot | null>(null)
   const [qr, setQr] = useState<QRData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -23,9 +26,14 @@ export default function AdminDashboardPage() {
     setLoading(true)
     setError('')
     try {
-      const [videoData, qrData] = await Promise.all([api.listVideos(), api.getQR()])
+      const [videoData, qrData, slotData] = await Promise.all([api.listVideos(), api.getQR(), api.listAdminVideoSlots()])
       setVideos(videoData.items)
       setQr(qrData)
+      setSlots(slotData.items)
+      setSlotChoices({
+        'chapter-1': slotData.items.find(slot => slot.slot_key === 'chapter-1')?.video?.id || '',
+        'chapter-2': slotData.items.find(slot => slot.slot_key === 'chapter-2')?.video?.id || '',
+      })
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Không tải được dữ liệu'
       setError(message)
@@ -58,6 +66,19 @@ export default function AdminDashboardPage() {
       setVideos(items => items.filter(video => video.id !== id))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Xóa video thất bại')
+    }
+  }
+
+  const saveSlot = async (slot: PublicVideoSlot) => {
+    setSavingSlot(slot)
+    setError('')
+    try {
+      await api.assignVideoSlot(slot, slotChoices[slot] || null)
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Không thể gán video vào chương này.')
+    } finally {
+      setSavingSlot(null)
     }
   }
 
@@ -96,6 +117,31 @@ export default function AdminDashboardPage() {
             </section>
           )}
         </div>
+        <section className="admin-card" style={{ marginBottom: 22 }} aria-labelledby="chapter-assignment-heading">
+          <p className="field-label">HIỂN THỊ CÔNG KHAI</p>
+          <h2 id="chapter-assignment-heading" style={{ margin: '8px 0' }}>Gán video vào hai chương</h2>
+          <p className="muted" style={{ marginTop: 0 }}>Chọn video cho từng chương. Chỉ video đã xuất bản mới xuất hiện cho người xem; video nháp vẫn có thể được gán để chuẩn bị.</p>
+          <div className="admin-grid two">
+            {(['chapter-1', 'chapter-2'] as const).map((slot, index) => {
+              const current = slots.find(item => item.slot_key === slot)?.video
+              const label = index === 0 ? 'Chương 1 · Tổng quan Ma nhai Ngũ Hành Sơn' : 'Chương 2 · Giải mã ma nhai'
+              return <div className="admin-card" key={slot} style={{ boxShadow: 'none' }}>
+                <strong>{label}</strong>
+                <p className="muted" style={{ fontSize: 13 }}>{current ? `Đang gán: ${current.title}` : 'Chưa gán video'}</p>
+                <label className="field">
+                  <span>Video nguồn</span>
+                  <select value={slotChoices[slot]} onChange={event => setSlotChoices(items => ({ ...items, [slot]: event.target.value }))} disabled={savingSlot !== null}>
+                    <option value="">Chưa gán video</option>
+                    {videos.map(video => <option key={video.id} value={video.id}>{video.title || 'Chưa có tiêu đề'} · {video.status}</option>)}
+                  </select>
+                </label>
+                <button className="secondary-button" style={{ marginTop: 12 }} disabled={savingSlot !== null} onClick={() => void saveSlot(slot)}>
+                  {savingSlot === slot ? 'Đang lưu…' : 'Lưu gán chương'}
+                </button>
+              </div>
+            })}
+          </div>
+        </section>
         <section className="admin-card">
           <div className="admin-table-wrap">
             <table className="admin-table">

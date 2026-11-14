@@ -102,6 +102,22 @@ class VideoListResponse(BaseModel):
     total: int
 
 
+PublicVideoSlot = Literal["chapter-1", "chapter-2"]
+
+
+class VideoSlotUpdate(BaseModel):
+    video_id: UUID | None = None
+
+
+class VideoSlotResponse(BaseModel):
+    slot_key: PublicVideoSlot
+    video: VideoResponse | None = None
+
+
+class VideoSlotListResponse(BaseModel):
+    items: list[VideoSlotResponse]
+
+
 class ProcessingJobResponse(BaseModel):
     id: UUID
     pipeline_run_id: UUID

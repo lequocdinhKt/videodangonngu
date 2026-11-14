@@ -2,24 +2,24 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import PublicHeader from '../../components/public/PublicHeader'
 import projectPoster from '../../assets/ma-nhai-project-poster.jpg'
-import { HERITAGE_CHAPTERS, HERITAGE_COPY, PROJECT_INTRO, localizeHeritageVideo } from '../../content/heritageContent'
+import { HERITAGE_CHAPTERS, HERITAGE_COPY, PROJECT_INTRO } from '../../content/heritageContent'
 import { api, formatDuration } from '../../services/api'
 import { usePreferredLanguage } from '../../services/language'
-import { UI_COPY, type Video } from '../../types'
+import { UI_COPY, type VideoSlot } from '../../types'
 
 export default function VideoLibraryPage() {
   const language = usePreferredLanguage()
   const copy = UI_COPY[language]
   const heritageCopy = HERITAGE_COPY[language]
-  const [videos, setVideos] = useState<Video[]>([])
+  const [slots, setSlots] = useState<VideoSlot[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
   const load = useCallback(() => {
     setLoading(true)
     setError('')
-    api.listPublishedVideos(language)
-      .then(data => setVideos(data.items.map(video => localizeHeritageVideo(video, language))))
+    api.listPublicVideoSlots(language)
+      .then(data => setSlots(data.items))
       .catch(err => setError(err instanceof Error ? err.message : copy.waking))
       .finally(() => setLoading(false))
   }, [copy.waking, language])
@@ -28,8 +28,8 @@ export default function VideoLibraryPage() {
 
   const chapters = useMemo(() => HERITAGE_CHAPTERS.map(chapter => ({
     chapter,
-    video: videos.find(video => video.id === chapter.productionVideoId),
-  })), [videos])
+    video: slots.find(slot => slot.slot_key === chapter.slotKey)?.video || null,
+  })), [slots])
 
   return (
     <main className="heritage-page heritage-library-page" lang={language}>

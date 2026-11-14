@@ -1,4 +1,4 @@
-import type { LanguageCode, Video } from '../types'
+import type { LanguageCode, PublicVideoSlot } from '../types'
 import overviewThumbnail from '../assets/ma-nhai-overview.jpg'
 import inscriptionThumbnail from '../assets/ma-nhai-inscription.jpg'
 
@@ -7,7 +7,7 @@ type LocalizedText = Record<LanguageCode, string>
 export interface HeritageChapter {
   number: string
   slug: string
-  productionVideoId: string | null
+  slotKey: PublicVideoSlot
   route: string
   menuLabel: LocalizedText
   title: LocalizedText
@@ -142,7 +142,7 @@ export const HERITAGE_CHAPTERS: HeritageChapter[] = [
   {
     number: '01',
     slug: 'hoi-an',
-    productionVideoId: null,
+    slotKey: 'chapter-1',
     route: '/videos/hoi-an',
     menuLabel: {
       'vi-VN': 'Tổng quan Ma nhai Ngũ Hành Sơn',
@@ -167,7 +167,7 @@ export const HERITAGE_CHAPTERS: HeritageChapter[] = [
   {
     number: '02',
     slug: 'giai-ma-ma-nhai',
-    productionVideoId: '5216c345-5779-4549-9439-22c6b5a0e760',
+    slotKey: 'chapter-2',
     route: '/giai-ma-ma-nhai',
     menuLabel: {
       'vi-VN': 'Giải mã ma nhai',
@@ -193,19 +193,4 @@ export const HERITAGE_CHAPTERS: HeritageChapter[] = [
 
 export function getHeritageChapter(slug: string | undefined): HeritageChapter | undefined {
   return HERITAGE_CHAPTERS.find(item => item.slug === slug)
-}
-
-export function getHeritageChapterForProductionVideo(videoId: string): HeritageChapter | undefined {
-  return HERITAGE_CHAPTERS.find(item => item.productionVideoId === videoId)
-}
-
-export function localizeHeritageVideo(video: Video, language: LanguageCode): Video {
-  const chapter = getHeritageChapterForProductionVideo(video.id)
-  if (!chapter) return video
-  return {
-    ...video,
-    title: chapter.title[language],
-    description: chapter.description[language],
-    thumbnail_url: chapter.thumbnail,
-  }
 }

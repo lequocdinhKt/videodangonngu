@@ -259,6 +259,31 @@ class SupabaseRepository:
 
         await self._run(_delete)
 
+    # --- Fixed public chapters ---
+
+    async def list_public_video_slots(self) -> dict[str, uuid.UUID | None]:
+        def _query():
+            return self.client.table("public_video_slots").select("slot_key,video_id").execute().data
+
+        rows = await self._run(_query)
+        slots = {"chapter-1": None, "chapter-2": None}
+        for row in rows:
+            if row["slot_key"] in slots:
+                slots[row["slot_key"]] = _parse_uuid(row.get("video_id"))
+        return slots
+
+    async def set_public_video_slot(self, slot_key: str, video_id: uuid.UUID | None) -> None:
+        payload = {
+            "slot_key": slot_key,
+            "video_id": str(video_id) if video_id else None,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }
+
+        def _upsert():
+            self.client.table("public_video_slots").upsert(payload, on_conflict="slot_key").execute()
+
+        await self._run(_upsert)
+
     # --- Localized titles and descriptions ---
 
     async def upsert_video_translation(

@@ -12,6 +12,8 @@ from app.schemas.video import (
     VideoLanguageResponse,
     VideoListResponse,
     VideoResponse,
+    VideoSlotListResponse,
+    VideoSlotResponse,
     VideoTranslationResponse,
 )
 from app.services.storage.local import get_storage
@@ -86,6 +88,32 @@ async def list_published_videos(
         video.translations = await repo.list_video_translations(video.id)
         items.append(await _video_response(video, code))
     return VideoListResponse(items=items, total=len(items))
+
+
+@router.get("/video-slots", response_model=VideoSlotListResponse)
+async def list_public_video_slots(
+    repo: Annotated[SupabaseRepository, Depends(get_repo)],
+    lang: str = Query("vi-VN"),
+):
+    """Return the two editorial slots in their stable public order.
+
+    A draft or unpublished assignment is intentionally returned as an empty
+    slot: it remains visible in the library, but cannot be leaked publicly.
+    """
+    code = _normalize_language(lang)
+    assignments = await repo.list_public_video_slots()
+    items = []
+    for slot_key in ("chapter-1", "chapter-2"):
+        video_id = assignments[slot_key]
+        video = await repo.get_video(video_id) if video_id else None
+        if video and video.status == VideoStatus.PUBLISHED:
+            video.languages = await repo.list_video_languages(video.id)
+            video.translations = await repo.list_video_translations(video.id)
+            response = await _video_response(video, code)
+        else:
+            response = None
+        items.append(VideoSlotResponse(slot_key=slot_key, video=response))
+    return VideoSlotListResponse(items=items)
 
 
 @router.get("/videos/{video_id}", response_model=VideoResponse)

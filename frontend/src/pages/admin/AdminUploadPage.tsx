@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../../services/api'
-import { LANGUAGES, type LanguageCode, type VideoTranslation } from '../../types'
+import { LANGUAGES, type LanguageCode, type PublicVideoSlot, type VideoTranslation } from '../../types'
 
 type FilesByLanguage = Partial<Record<LanguageCode, File>>
 
@@ -22,6 +22,7 @@ export default function AdminUploadPage() {
   const [video, setVideo] = useState<File>()
   const [thumbnail, setThumbnail] = useState<File>()
   const [subtitles, setSubtitles] = useState<FilesByLanguage>({})
+  const [slot, setSlot] = useState<PublicVideoSlot>('chapter-1')
   const [loading, setLoading] = useState(false)
   const [generatingMetadata, setGeneratingMetadata] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -80,6 +81,8 @@ export default function AdminUploadPage() {
       const draft = await api.createDraft(translations)
       finishStep()
 
+      await api.assignVideoSlot(slot, draft.id)
+
       setStatus('Đang tải video trực tiếp lên kho lưu trữ…')
       await api.uploadAsset(draft.id, 'video', video, undefined, value => setProgress(Math.round((completed + value / 100) / totalSteps * 100)))
       finishStep()
@@ -123,6 +126,18 @@ export default function AdminUploadPage() {
           <div className="progress-track" style={{ marginTop: 12 }}><div className="progress-bar" style={{ width: `${progress}%` }} /></div>
           <p className="muted" style={{ marginBottom: 0, fontSize: 13 }}>Không đóng trang cho tới khi hoàn tất. Video lớn được tải thẳng lên R2, không đi qua bộ nhớ API.</p>
         </section>}
+
+        <section className="admin-card" style={{ marginBottom: 18 }}>
+          <p className="field-label">CHƯƠNG CÔNG KHAI</p>
+          <label className="field" style={{ marginTop: 12 }}>
+            <span>Gắn video này vào *</span>
+            <select value={slot} onChange={event => setSlot(event.target.value as PublicVideoSlot)} disabled={loading}>
+              <option value="chapter-1">Chương 1 · Tổng quan Ma nhai Ngũ Hành Sơn</option>
+              <option value="chapter-2">Chương 2 · Giải mã ma nhai</option>
+            </select>
+          </label>
+          <p className="muted" style={{ marginBottom: 0, fontSize: 13 }}>Video chỉ hiển thị công khai sau khi có đủ dữ liệu và được xuất bản.</p>
+        </section>
 
         <section className="admin-card" style={{ marginBottom: 18 }}>
           <p className="field-label">NỘI DUNG ĐA NGÔN NGỮ</p>

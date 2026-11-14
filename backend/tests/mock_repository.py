@@ -29,6 +29,7 @@ class InMemoryRepository:
     self.audio: dict[uuid.UUID, dict] = {}
     self.jobs: dict[uuid.UUID, dict] = {}
     self.translations: dict[tuple[uuid.UUID, str], dict] = {}
+    self.public_video_slots: dict[str, uuid.UUID | None] = {"chapter-1": None, "chapter-2": None}
 
   async def get_user_by_email(self, email: str) -> User | None:
     for row in self.users.values():
@@ -98,6 +99,15 @@ class InMemoryRepository:
 
   async def delete_video(self, video_id: uuid.UUID) -> None:
     self.videos.pop(video_id, None)
+    for slot_key, assigned_id in self.public_video_slots.items():
+      if assigned_id == video_id:
+        self.public_video_slots[slot_key] = None
+
+  async def list_public_video_slots(self) -> dict[str, uuid.UUID | None]:
+    return self.public_video_slots.copy()
+
+  async def set_public_video_slot(self, slot_key: str, video_id: uuid.UUID | None) -> None:
+    self.public_video_slots[slot_key] = video_id
 
   async def upsert_video_translation(self, video_id, language_code, title, description=""):
     from app.models.db import VideoTranslation

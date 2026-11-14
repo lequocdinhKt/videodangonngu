@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import PublicHeader from '../../components/public/PublicHeader'
-import { DECODE_COPY, HERITAGE_COPY, getHeritageChapter, localizeHeritageVideo } from '../../content/heritageContent'
+import { DECODE_COPY, HERITAGE_COPY, getHeritageChapter } from '../../content/heritageContent'
 import { api, formatDuration } from '../../services/api'
 import { usePreferredLanguage } from '../../services/language'
 import { UI_COPY, type Video } from '../../types'
@@ -21,16 +21,11 @@ export default function DecodeLibraryPage() {
   const load = useCallback(() => {
     setLoading(true)
     setError('')
-    if (!chapter.productionVideoId) {
-      setError(copy.videoNotBound)
-      setLoading(false)
-      return
-    }
-    api.getVideo(chapter.productionVideoId, language)
-      .then(current => setVideo(localizeHeritageVideo(current, language)))
+    api.listPublicVideoSlots(language)
+      .then(data => setVideo(data.items.find(slot => slot.slot_key === chapter.slotKey)?.video || null))
       .catch(err => setError(err instanceof Error ? err.message : copy.waking))
       .finally(() => setLoading(false))
-  }, [copy.waking, language])
+  }, [copy.waking, chapter.slotKey, language])
 
   useEffect(() => { load() }, [load])
 
@@ -50,7 +45,7 @@ export default function DecodeLibraryPage() {
 
       <section className="decode-results" aria-label={decodeCopy.result}>
         {loading && <div className="state-card"><span className="spinner" /><p>{copy.loading}</p></div>}
-        {!loading && error && <div className="state-card error-state"><strong>{copy.videoComingSoon}</strong><p>{error}</p><button onClick={load} className="secondary-button">{copy.retry}</button></div>}
+        {!loading && (error || !video) && <div className="state-card error-state"><strong>{copy.videoComingSoon}</strong><p>{error || copy.videoNotBound}</p><button onClick={load} className="secondary-button">{copy.retry}</button></div>}
         {!loading && video && (
           <Link to={`/videos/${chapter.slug}`} className="decode-video-card">
             <div className="decode-video-thumbnail">
