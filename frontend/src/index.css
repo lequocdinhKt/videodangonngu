@@ -121,10 +121,19 @@ button { cursor: pointer; }
 .settings-control-wrap { position:relative; }
 .player-settings-backdrop { position:fixed; z-index:90; inset:0; width:100%; height:100%; padding:0; background:rgba(0,0,0,.22); border:0; cursor:default; }
 .player-settings-menu { position:absolute; z-index:100; right:0; bottom:52px; width:min(280px,calc(100vw - 28px)); max-height:min(440px,68vh); overflow:auto; padding:8px; color:#fff; background:rgba(18,22,24,.98); border:1px solid rgba(255,255,255,.16); border-radius:16px; box-shadow:0 16px 44px rgba(0,0,0,.42); outline:none; }
-.player-settings-grabber,.player-settings-heading { display:none; }
+.player-settings-grabber { display:none; }
+.player-settings-heading { min-height:44px; display:flex; align-items:center; gap:8px; padding:2px 2px 8px; color:#fff; font-size:14px; font-weight:750; }
+.player-settings-heading > span { flex:1; }
 .player-settings-menu section + section { margin-top:5px; padding-top:5px; border-top:1px solid rgba(255,255,255,.13); }
 .player-settings-menu p { margin:0; padding:8px 10px; color:#b7b7b7; font-size:10px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; }
 .player-settings-menu button { width:100%; min-height:44px; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 10px; color:#fff; text-align:left; background:transparent; border:0; border-radius:7px; font-size:13px; }
+.player-settings-heading button { width:36px; min-width:36px; min-height:36px; height:36px; display:grid; place-items:center; padding:0; background:rgba(255,255,255,.1); border-radius:50%; font-size:24px; font-weight:300; line-height:1; }
+.player-settings-heading .player-settings-back { margin-left:-2px; }
+.player-settings-heading svg,.player-settings-root svg { width:19px; height:19px; fill:none; }
+.player-settings-root { display:grid; gap:2px; }
+.player-settings-root button > span { display:grid; gap:2px; }
+.player-settings-root button strong { font-size:13px; font-weight:650; }.player-settings-root button small { color:#b7b7b7; font-size:11px; }
+.player-settings-root button > svg { flex:none; color:rgba(255,255,255,.72); }
 .player-settings-menu button:hover,.player-settings-menu button:focus-visible,.player-settings-menu button.is-selected { background:rgba(255,255,255,.16); outline:none; }.player-settings-menu button b { color:#fff; }.player-settings-menu button small { display:block; margin-top:2px; color:#bbb; font-size:10px; }.player-settings-menu button:disabled { opacity:.48; }
 .video-shell:fullscreen { width:100vw; height:100vh; border:0; border-radius:0; background:#000; }.video-shell:fullscreen .video-stage { height:100vh; aspect-ratio:auto; }.video-shell:fullscreen .player-controls { padding-right:28px; padding-bottom:20px; padding-left:28px; }
 .player-control-button:focus-visible,.player-center-button:focus-visible,.player-progress:focus-visible { outline:2px solid #fff; outline-offset:2px; }
@@ -176,7 +185,7 @@ button { cursor: pointer; }
   .player-settings-backdrop { background:rgba(1,8,8,.52); backdrop-filter:blur(2px); }
   .player-settings-menu { position:fixed; right:0; bottom:0; left:0; width:100%; max-height:min(72dvh,560px); padding:8px 16px calc(16px + env(safe-area-inset-bottom)); border:0; border-top:1px solid rgba(255,255,255,.16); border-radius:22px 22px 0 0; background:rgba(14,20,21,.98); box-shadow:0 -18px 50px rgba(0,0,0,.4); }
   .player-settings-grabber { width:38px; height:4px; display:block; margin:2px auto 12px; background:rgba(255,255,255,.34); border-radius:999px; }
-  .player-settings-heading { display:flex; align-items:center; justify-content:space-between; min-height:44px; padding:0 2px 6px; color:#fff; font-size:16px; font-weight:750; }
+  .player-settings-heading { justify-content:space-between; min-height:44px; padding:0 2px 6px; font-size:16px; }
   .player-settings-heading button { width:44px; height:44px; display:grid; place-items:center; padding:0; color:#fff; background:rgba(255,255,255,.1); border:0; border-radius:50%; font-size:27px; font-weight:300; line-height:1; }
   .player-settings-menu section + section { margin-top:10px; padding-top:10px; }
   .player-settings-menu p { padding:8px 6px; }

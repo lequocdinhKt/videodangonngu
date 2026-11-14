@@ -2,7 +2,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import FileResponse
 
 from app.config.settings import get_settings
 from app.core.deps import get_repo
@@ -111,11 +111,10 @@ async def get_subtitle(
     language = await repo.get_video_language(video_id, code)
     if not language or not language.subtitle_key:
         raise HTTPException(status_code=404, detail="Subtitle not found")
-    storage = get_storage()
-    if get_settings().storage_provider == "local":
-        return FileResponse(await storage.get_path(language.subtitle_key), media_type="text/vtt")
-    signed = await storage.get_signed_url(language.subtitle_key)
-    return RedirectResponse(url=signed, status_code=302)
+    # Keep WebVTT on the API origin.  Redirecting a <track> request to a
+    # presigned R2 URL makes captions depend on that bucket's CORS policy;
+    # browsers then fail silently and the player appears to have no subtitles.
+    return FileResponse(await get_storage().get_path(language.subtitle_key), media_type="text/vtt")
 
 
 @router.get("/videos/{video_id}/stream/original")

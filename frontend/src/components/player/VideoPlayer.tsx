@@ -20,6 +20,8 @@ function VolumeIcon({ muted }: { muted: boolean }) {
 
 function SettingsIcon() { return <svg viewBox="0 0 24 24" aria-hidden><path d="M12 8.2a3.8 3.8 0 1 0 0 7.6 3.8 3.8 0 0 0 0-7.6Zm8 3.8 2-1.5-2-3.5-2.35.95a7.9 7.9 0 0 0-1.62-.94L15.7 4.5h-4l-.33 2.54c-.57.23-1.12.54-1.62.94L7.4 7.03l-2 3.47L7.4 12c-.03.3-.03.6 0 .9l-2 1.52 2 3.46 2.35-.94c.5.4 1.05.7 1.62.93l.33 2.54h4l.33-2.54c.57-.23 1.12-.54 1.62-.93l2.35.94 2-3.46-2-1.52c.03-.3.03-.6 0-.9Z" /></svg> }
 function FullscreenIcon() { return <svg viewBox="0 0 24 24" aria-hidden><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5" fill="none" stroke="currentColor" strokeWidth="2" /></svg> }
+function BackIcon() { return <svg viewBox="0 0 24 24" aria-hidden><path d="m14.5 5-7 7 7 7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg> }
+function ChevronIcon() { return <svg viewBox="0 0 24 24" aria-hidden><path d="m9 5 7 7-7 7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg> }
 
 export default function VideoPlayer({ video, initialLanguage }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -31,6 +33,7 @@ export default function VideoPlayer({ video, initialLanguage }: Props) {
   const [subtitleLanguage, setSubtitleLanguage] = useState<LanguageCode>(initialLanguage)
   const [subtitlesEnabled, setSubtitlesEnabled] = useState(true)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [settingsView, setSettingsView] = useState<'root' | 'subtitles' | 'speed'>('root')
   const [trackUrl, setTrackUrl] = useState<string | null>(null)
   const [playing, setPlaying] = useState(false)
   const [controlsVisible, setControlsVisible] = useState(true)
@@ -63,7 +66,7 @@ export default function VideoPlayer({ video, initialLanguage }: Props) {
     }).catch(() => setTrackUrl(null))
     return () => { cancelled = true; if (currentUrl) URL.revokeObjectURL(currentUrl) }
   }, [subtitleLanguage, subtitlesEnabled, video.languages])
-  useEffect(() => { setPlaying(false); setCurrentTime(0); setDuration((video.duration_ms || 0) / 1000); setControlsVisible(true); setSettingsOpen(false) }, [video.duration_ms, video.video_url])
+  useEffect(() => { setPlaying(false); setCurrentTime(0); setDuration((video.duration_ms || 0) / 1000); setControlsVisible(true); setSettingsOpen(false); setSettingsView('root') }, [video.duration_ms, video.video_url])
   useEffect(() => { if (videoRef.current) videoRef.current.playbackRate = playbackRate }, [playbackRate])
   useEffect(() => {
     // A dynamically inserted <track> is disabled by some browsers unless its
@@ -96,7 +99,7 @@ export default function VideoPlayer({ video, initialLanguage }: Props) {
     element.currentTime = next; setCurrentTime(next); revealControls()
   }
   const toggleFullscreen = async () => { if (!containerRef.current) return; if (document.fullscreenElement) await document.exitFullscreen(); else await containerRef.current.requestFullscreen(); revealControls() }
-  const closeSettings = () => { setSettingsOpen(false); settingsButtonRef.current?.focus() }
+  const closeSettings = () => { setSettingsOpen(false); setSettingsView('root'); settingsButtonRef.current?.focus() }
   const handleKeyboard = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === 'Escape' && settingsOpen) { event.preventDefault(); closeSettings(); return }
     if (event.target instanceof HTMLInputElement || event.target instanceof HTMLButtonElement) return
@@ -110,6 +113,8 @@ export default function VideoPlayer({ video, initialLanguage }: Props) {
   const settingsLabel = initialLanguage === 'vi-VN' ? 'Cài đặt video' : initialLanguage === 'ru-RU' ? 'Настройки видео' : initialLanguage === 'zh-CN' ? '视频设置' : 'Video settings'
   const speedLabel = initialLanguage === 'vi-VN' ? 'Tốc độ phát' : initialLanguage === 'ru-RU' ? 'Скорость' : initialLanguage === 'zh-CN' ? '播放速度' : 'Playback speed'
   const volumeLabel = initialLanguage === 'vi-VN' ? 'Âm lượng' : initialLanguage === 'ru-RU' ? 'Громкость' : initialLanguage === 'zh-CN' ? '音量' : 'Volume'
+  const backLabel = initialLanguage === 'vi-VN' ? 'Quay lại cài đặt' : initialLanguage === 'ru-RU' ? 'Назад к настройкам' : initialLanguage === 'zh-CN' ? '返回设置' : 'Back to settings'
+  const selectedSubtitle = subtitlesEnabled ? LANGUAGES.find(item => item.code === subtitleLanguage)?.nativeLabel || copy.subtitlesOff : copy.subtitlesOff
 
   return <div ref={containerRef} className={`video-shell custom-video-player ${hasVideo ? '' : 'is-preview'} ${controlsVisible || !playing || settingsOpen ? 'controls-visible' : 'controls-hidden'}`} onContextMenu={event => event.preventDefault()} onKeyDown={handleKeyboard} onPointerMove={revealControls} onFocusCapture={revealControls} tabIndex={0}>
     <div className="video-stage" onClick={() => void togglePlayback()}>
@@ -138,17 +143,24 @@ export default function VideoPlayer({ video, initialLanguage }: Props) {
               <button type="button" className="player-settings-backdrop" onClick={closeSettings} aria-label={initialLanguage === 'vi-VN' ? 'Đóng cài đặt video' : 'Close video settings'} />
               <div ref={settingsPanelRef} className="player-settings-menu" role="dialog" aria-modal="true" aria-label={settingsLabel} tabIndex={-1}>
                 <div className="player-settings-grabber" aria-hidden />
-                <div className="player-settings-heading"><span>{settingsLabel}</span><button type="button" onClick={closeSettings} aria-label={initialLanguage === 'vi-VN' ? 'Đóng' : 'Close'}>×</button></div>
-              <section><p>{copy.subtitles}</p><div role="group" aria-label={copy.subtitles}>
+                <div className="player-settings-heading">
+                  {settingsView === 'root' ? <span>{settingsLabel}</span> : <><button type="button" className="player-settings-back" onClick={() => setSettingsView('root')} aria-label={backLabel}><BackIcon /></button><span>{settingsView === 'subtitles' ? copy.subtitles : speedLabel}</span></>}
+                  <button type="button" onClick={closeSettings} aria-label={initialLanguage === 'vi-VN' ? 'Đóng' : 'Close'}>×</button>
+                </div>
+                {settingsView === 'root' && <section className="player-settings-root" aria-label={settingsLabel}>
+                  <button type="button" onClick={() => setSettingsView('subtitles')}><span><strong>{copy.subtitles}</strong><small>{selectedSubtitle}</small></span><ChevronIcon /></button>
+                  <button type="button" onClick={() => setSettingsView('speed')}><span><strong>{speedLabel}</strong><small>{playbackRate === 1 ? '1×' : `${playbackRate}×`}</small></span><ChevronIcon /></button>
+                </section>}
+                {settingsView === 'subtitles' && <section><p>{copy.subtitles}</p><div role="group" aria-label={copy.subtitles}>
                 <button type="button" role="menuitemradio" aria-checked={!subtitlesEnabled} className={!subtitlesEnabled ? 'is-selected' : ''} onClick={() => { setSubtitlesEnabled(false); closeSettings() }}><span>{copy.subtitlesOff}</span>{!subtitlesEnabled && <b aria-hidden>✓</b>}</button>
                 {LANGUAGES.map(item => { const isAvailable = available.some(track => track.code === item.code); const isSelected = subtitlesEnabled && subtitleLanguage === item.code; return <button type="button" key={item.code} role="menuitemradio" aria-checked={isSelected} className={`${isSelected ? 'is-selected' : ''} ${!isAvailable ? 'is-unavailable' : ''}`} disabled={!isAvailable} onClick={() => { setSubtitlesEnabled(true); setSubtitleLanguage(item.code); closeSettings() }}><span><strong>{item.nativeLabel}</strong>{!isAvailable && <small>{copy.subtitleUnavailable}</small>}</span>{isSelected && <b aria-hidden>✓</b>}</button> })}
-              </div></section>
-              <section><p>{speedLabel}</p><div className="playback-rates" role="group" aria-label={speedLabel}>
+                </div></section>}
+                {settingsView === 'speed' && <section><p>{speedLabel}</p><div className="playback-rates" role="group" aria-label={speedLabel}>
                 {[0.75, 1, 1.25, 1.5].map(rate => <button type="button" key={rate} role="menuitemradio" aria-checked={playbackRate === rate} className={playbackRate === rate ? 'is-selected' : ''} onClick={() => { setPlaybackRate(rate); closeSettings() }}><span>{rate === 1 ? '1×' : `${rate}×`}</span>{playbackRate === rate && <b aria-hidden>✓</b>}</button>)}
-              </div></section>
+                </div></section>}
               </div>
             </>}
-            <button ref={settingsButtonRef} type="button" className="player-control-button" onClick={() => { setSettingsOpen(open => !open); revealControls() }} aria-label={settingsLabel} aria-expanded={settingsOpen}><SettingsIcon /></button>
+            <button ref={settingsButtonRef} type="button" className="player-control-button" onClick={() => { setSettingsOpen(open => { if (!open) setSettingsView('root'); return !open }); revealControls() }} aria-label={settingsLabel} aria-expanded={settingsOpen}><SettingsIcon /></button>
           </div>
           <button type="button" className="player-control-button" onClick={() => void toggleFullscreen()} aria-label={copy.fullscreen}><FullscreenIcon /></button>
         </div>
