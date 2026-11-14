@@ -57,6 +57,7 @@ export default function DecodeLibraryPage() {
             </div>
             <div className="decode-video-copy">
               <h2>{video.title}</h2>
+              <p>{video.description}</p>
             </div>
           </Link>
         )}

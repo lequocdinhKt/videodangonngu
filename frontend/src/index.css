@@ -872,6 +872,58 @@ button { cursor: pointer; }
   }
 }
 
+/* Video metadata: one concise title line, followed by a quieter description. */
+.decode-video-copy h2 {
+  width:100%;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.decode-video-copy > p:not(:first-child) {
+  width:100%;
+  display:block;
+  overflow:hidden;
+  margin:10px 0 0;
+  color:var(--heritage-muted);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",sans-serif;
+  font-size:14px;
+  font-weight:400;
+  line-height:1.5;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.heritage-video-copy {
+  max-width:860px;
+  padding:36px 0 56px;
+  text-align:left;
+}
+
+.heritage-video-copy h2 {
+  color:var(--heritage-ink);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif;
+  font-size:clamp(24px,3.2vw,38px);
+  font-weight:650;
+  line-height:1.2;
+  letter-spacing:-.03em;
+}
+
+.heritage-video-copy > p {
+  max-width:740px;
+  margin:14px 0 0;
+  color:var(--heritage-muted);
+  font-size:16px;
+  line-height:1.65;
+}
+
+@media (max-width: 520px) {
+  .decode-video-copy > p:not(:first-child) { margin-top:6px; font-size:13px; }
+  .heritage-video-copy { padding:28px 14px 44px; }
+  .heritage-video-copy h2 { font-size:23px; line-height:1.26; }
+  .heritage-video-copy > p { margin-top:10px; font-size:16px; line-height:1.58; }
+}
+
 /* The library opens as two full-screen chapters with native vertical scroll snapping. */
 .heritage-library-page {
   height:100vh;
