@@ -23,8 +23,10 @@ export default function AdminUploadPage() {
   const [thumbnail, setThumbnail] = useState<File>()
   const [subtitles, setSubtitles] = useState<FilesByLanguage>({})
   const [loading, setLoading] = useState(false)
+  const [generatingMetadata, setGeneratingMetadata] = useState(false)
   const [progress, setProgress] = useState(0)
   const [status, setStatus] = useState('')
+  const [notice, setNotice] = useState('')
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -35,6 +37,26 @@ export default function AdminUploadPage() {
 
   const updateTranslation = (code: LanguageCode, field: 'title' | 'description', value: string) => {
     setTranslations(items => items.map(item => item.language_code === code ? { ...item, [field]: value } : item))
+  }
+
+  const generateMetadata = async () => {
+    const vietnamese = translations.find(item => item.language_code === 'vi-VN')!
+    if (!vietnamese.title.trim() || !vietnamese.description.trim()) {
+      setError('Nhập tiêu đề và mô tả tiếng Việt trước khi tạo bản nháp bằng AI.')
+      return
+    }
+    setGeneratingMetadata(true)
+    setError('')
+    setNotice('')
+    try {
+      const result = await api.generateMetadataTranslations(vietnamese.title, vietnamese.description)
+      setTranslations(items => items.map(item => result.translations.find(generated => generated.language_code === item.language_code) || item))
+      setNotice('AI đã tạo bản nháp cho English, Русский và 中文 (简体). Hãy kiểm tra và chỉnh sửa trước khi tạo video.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Không thể tạo bản nháp bằng AI.')
+    } finally {
+      setGeneratingMetadata(false)
+    }
   }
 
   const submit = async (event: React.FormEvent) => {
@@ -95,6 +117,7 @@ export default function AdminUploadPage() {
         </header>
 
         {error && <div className="admin-card danger" role="alert" style={{ marginBottom: 18 }}>{error}</div>}
+        {notice && <div className="admin-card success" role="status" style={{ marginBottom: 18 }}>{notice}</div>}
         {loading && <section className="admin-card" style={{ marginBottom: 18 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}><strong>{status}</strong><span>{progress}%</span></div>
           <div className="progress-track" style={{ marginTop: 12 }}><div className="progress-bar" style={{ width: `${progress}%` }} /></div>
@@ -103,7 +126,13 @@ export default function AdminUploadPage() {
 
         <section className="admin-card" style={{ marginBottom: 18 }}>
           <p className="field-label">NỘI DUNG ĐA NGÔN NGỮ</p>
-          <p className="muted">Tiêu đề của cả bốn ngôn ngữ là bắt buộc trước khi xuất bản. Mô tả có thể bổ sung sau.</p>
+          <div className="metadata-heading">
+            <p className="muted">Tiêu đề của cả bốn ngôn ngữ là bắt buộc trước khi xuất bản. Mô tả có thể bổ sung sau.</p>
+            <button className="secondary-button ai-generate-button" type="button" onClick={() => void generateMetadata()} disabled={loading || generatingMetadata} aria-describedby="ai-metadata-hint">
+              {generatingMetadata ? 'AI đang tạo bản nháp…' : 'Tạo tiêu đề & mô tả bằng AI'}
+            </button>
+          </div>
+          <p id="ai-metadata-hint" className="muted metadata-hint">Dùng nội dung tiếng Việt để tạo bản nháp cho English, Русский và 中文 (简体). Luôn kiểm tra và chỉnh sửa trước khi xuất bản.</p>
           <div className="admin-grid two">
             {LANGUAGES.map(language => {
               const translation = translations.find(item => item.language_code === language.code)!

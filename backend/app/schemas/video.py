@@ -64,6 +64,15 @@ class VideoDraftCreate(BaseModel):
         return value
 
 
+class MetadataTranslationRequest(BaseModel):
+    title: str = Field(min_length=1, max_length=500)
+    description: str = Field(min_length=1, max_length=5000)
+
+
+class MetadataTranslationResponse(BaseModel):
+    translations: list[VideoTranslationInput]
+
+
 class VideoLanguageResponse(BaseModel):
     language_code: str
     subtitle_url: str | None = None

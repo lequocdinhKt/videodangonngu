@@ -175,6 +175,9 @@ export const api = {
   createDraft: (translations: VideoTranslation[]) => request<{ id: string }>(`${API}/admin/videos/draft`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ translations }),
   }),
+  generateMetadataTranslations: (title: string, description: string) => request<{ translations: VideoTranslation[] }>(`${API}/admin/translations/generate`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title, description }),
+  }),
   updateTranslations: (id: string, translations: VideoTranslation[]) => request(`${API}/admin/videos/${id}/translations`, {
     method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ translations }),
   }),

@@ -153,6 +153,7 @@ button { cursor: pointer; }
 .admin-shell { width:min(1180px,100%); margin:0 auto; }.admin-topbar { display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:28px; }
 .admin-actions { display:flex; gap:10px; flex-wrap:wrap; }.admin-card { padding:22px; background:#fff; border:1px solid #e2e8f0; border-radius:16px; box-shadow:0 8px 28px rgba(15,23,42,.045); }
 .admin-grid { display:grid; gap:18px; }.admin-grid.two { grid-template-columns:repeat(2,minmax(0,1fr)); }.admin-grid.four { grid-template-columns:repeat(4,minmax(0,1fr)); }
+.metadata-heading { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:8px; }.metadata-heading .muted { margin:0; }.ai-generate-button { min-height:44px; flex:none; }.metadata-hint { margin:0 0 16px; font-size:13px; }
 .field { display:grid; gap:7px; }.field label,.field-label { color:#475569; font-size:12px; font-weight:750; }.field input,.field textarea,.field select,.admin-input { width:100%; padding:11px 12px; color:#172033; background:#fbfdff; border:1px solid #d8e0ea; border-radius:10px; outline:none; }
 .field textarea { min-height:92px; resize:vertical; }.field input:focus,.field textarea:focus,.field select:focus { border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.08); }
 .admin-title { margin:0; font-size:28px; letter-spacing:-.035em; }.muted { color:#64748b; }.danger { color:#b91c1c; }.success { color:#047857; }
@@ -172,7 +173,7 @@ button { cursor: pointer; }
   .site-header { min-height:70px; }.brand-link strong { display:none; }.language-pill { font-size:12px; }.hero-copy { padding:42px 0 28px; }.hero-copy h1 { font-size:40px; }
   .video-card-copy { padding:18px; }.play-badge { opacity:.92; width:44px; height:44px; }.site-footer { flex-direction:column; }
   .player-controls { padding:0 10px 7px; }.player-center-button { width:56px; height:56px; }.player-center-button svg { width:26px; height:26px; }.player-preview-label { top:10px; right:10px; max-width:calc(100% - 20px); }.player-time { margin-left:2px; }.player-control-button { width:38px; }.player-volume { width:54px; padding:0 2px; }.subtitle-menu { right:-36px; width:205px; }
-  .qr-card { align-items:flex-start; flex-direction:column; }.admin-topbar { align-items:flex-start; flex-direction:column; }
+  .qr-card { align-items:flex-start; flex-direction:column; }.admin-topbar,.metadata-heading { align-items:flex-start; flex-direction:column; }.ai-generate-button { width:100%; }
 }
 
 @media (max-width: 640px) {

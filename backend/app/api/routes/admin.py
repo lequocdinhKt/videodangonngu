@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import base64
 import io
 import mimetypes
@@ -21,6 +22,8 @@ from app.schemas.video import (
     AssetCompleteRequest,
     GenerateResponse,
     LoginRequest,
+    MetadataTranslationRequest,
+    MetadataTranslationResponse,
     PreviewResponse,
     ProcessingJobResponse,
     QRResponse,
@@ -42,7 +45,8 @@ from app.services.storage.errors import storage_http_exception
 from app.services.storage.local import get_storage
 from app.services.subtitle.parser import SRTParseError, parse_srt, segments_to_vtt
 from app.services.subtitle.validator import validate_srt_structure
-from app.services.translation.factory import validate_translation_config
+from app.services.translation.base import SegmentInput, TranslationContext
+from app.services.translation.factory import get_translation_provider, validate_translation_config
 from app.workers.subtitle_worker import is_subtitle_pipeline_active, start_subtitle_pipeline
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -268,6 +272,44 @@ async def update_video_translations(
         if code == "vi-VN":
             await repo.update_video(video_id, title=item.title, description=item.description)
     return {"message": "Translations updated"}
+
+
+@router.post("/translations/generate", response_model=MetadataTranslationResponse)
+async def generate_metadata_translations(
+    body: MetadataTranslationRequest,
+    _: User = Depends(get_current_user),
+):
+    """Create editable title/description drafts from the Vietnamese source."""
+    try:
+        validate_translation_config()
+        provider = get_translation_provider()
+        source = [
+            SegmentInput(sequence=1, start_ms=0, end_ms=1, source_text=body.title),
+            SegmentInput(sequence=2, start_ms=1, end_ms=2, source_text=body.description),
+        ]
+
+        async def translate(language_code: str):
+            result = await provider.translate_batch(
+                source,
+                TranslationContext(
+                    title=body.title,
+                    description=body.description,
+                    target_language=language_code,
+                ),
+            )
+            translated = {item.sequence: item.translated_text.strip() for item in result}
+            title = translated.get(1, "")
+            description = translated.get(2, "")
+            if not title or not description:
+                raise ValueError(f"AI did not return a complete {language_code} translation")
+            return {"language_code": language_code, "title": title, "description": description}
+
+        translations = await asyncio.gather(*(translate(code) for code in SUPPORTED_LANGUAGES if code != "vi-VN"))
+        return MetadataTranslationResponse(translations=translations)
+    except ValueError as exc:
+        raise HTTPException(status_code=503, detail=f"Không thể dùng AI lúc này: {exc}") from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="AI chưa thể tạo bản nháp. Vui lòng thử lại sau.") from exc
 
 
 @router.post("/videos/{video_id}/upload-url", response_model=UploadUrlResponse)
