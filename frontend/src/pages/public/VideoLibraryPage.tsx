@@ -46,13 +46,14 @@ export default function VideoLibraryPage() {
             <div className="project-intro-text">
               {PROJECT_INTRO[language].map(paragraph => <p key={paragraph}>{paragraph}</p>)}
             </div>
-            <a href="#chapters" className="heritage-scroll-link">
-              <span aria-hidden>
-                <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" /></svg>
-              </span>{heritageCopy.explore}
-            </a>
           </div>
         </section>
+
+        <a href="#chapters" className="heritage-scroll-link library-scroll-link">
+          <span aria-hidden>
+            <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" /></svg>
+          </span>{heritageCopy.explore}
+        </a>
       </div>
 
       <section id="chapters" className="heritage-chapters">
