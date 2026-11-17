@@ -141,9 +141,9 @@ export const DECODE_COPY: Record<LanguageCode, {
 export const HERITAGE_CHAPTERS: HeritageChapter[] = [
   {
     number: '01',
-    slug: 'hoi-an',
+    slug: 'tong-quan-ma-nhai-ngu-hanh-son',
     slotKey: 'chapter-1',
-    route: '/videos/hoi-an',
+    route: '/videos/tong-quan-ma-nhai-ngu-hanh-son',
     menuLabel: {
       'vi-VN': 'Tổng quan Ma nhai Ngũ Hành Sơn',
       'en-US': 'Overview of Ma Nhai inscriptions',

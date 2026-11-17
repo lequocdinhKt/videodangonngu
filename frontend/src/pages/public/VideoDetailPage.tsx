@@ -14,21 +14,25 @@ export default function VideoDetailPage() {
   const heritageCopy = HERITAGE_COPY[language]
   const [video, setVideo] = useState<Video | null>(null)
   const [loaded, setLoaded] = useState(false)
+  const [error, setError] = useState('')
   const chapter = getHeritageChapter(id)
 
   const load = useCallback(() => {
     if (!chapter) return
     setLoaded(false)
+    setError('')
     api.listPublicVideoSlots(language)
       .then(data => setVideo(data.items.find(slot => slot.slot_key === chapter.slotKey)?.video || null))
-      .catch(() => setVideo(null))
+      .catch(err => {
+        setVideo(null)
+        setError(err instanceof Error ? err.message : copy.waking)
+      })
       .finally(() => setLoaded(true))
-  }, [chapter, language])
+  }, [chapter, copy.waking, language])
 
   useEffect(() => { load() }, [load])
 
   if (!chapter) return <main className="heritage-page"><div className="state-card"><p>{copy.empty}</p><Link to="/videos" className="secondary-button">{heritageCopy.home}</Link></div></main>
-  if (loaded && !video) return <main className="heritage-page"><div className="state-card error-state" role="status"><strong>{copy.videoComingSoon}</strong><p>{copy.videoNotBound}</p><Link to="/videos" className="secondary-button">{heritageCopy.home}</Link></div></main>
 
   return (
     <main className="heritage-page heritage-detail-page">
@@ -43,7 +47,21 @@ export default function VideoDetailPage() {
         <h1>{chapter.menuLabel[language]}</h1>
       </header>
 
-      {!loaded && <div className="state-card"><span className="spinner" /><p>{copy.loading}</p></div>}
+      {!loaded && !video && <div className="state-card" role="status"><span className="spinner" /><p>{copy.loading}</p></div>}
+
+      {loaded && !video && (
+        <div className="state-card warning-state">
+          <div className="state-card-message" role="status">
+            <strong>{copy.videoComingSoon}</strong>
+            <p>{error || copy.videoNotBound}</p>
+          </div>
+          <div className="state-card-actions">
+            <button type="button" className="secondary-button" onClick={load}>{copy.retry}</button>
+            <Link to="/videos" className="secondary-button">{heritageCopy.home}</Link>
+          </div>
+        </div>
+      )}
+
       {video && (
         <div className="heritage-video-layout">
           <VideoPlayer video={video} initialLanguage={language} />

@@ -15,6 +15,7 @@ export default function App() {
         <Route path="/" element={<LanguageSelectPage />} />
         <Route path="/videos" element={<VideoLibraryPage />} />
         <Route path="/giai-ma-ma-nhai" element={<DecodeLibraryPage />} />
+        <Route path="/videos/hoi-an" element={<Navigate to="/videos/tong-quan-ma-nhai-ngu-hanh-son" replace />} />
         <Route path="/videos/ha-long" element={<Navigate to="/videos/giai-ma-ma-nhai" replace />} />
         <Route path="/videos/:id" element={<VideoDetailPage />} />
         <Route path="/admin/login" element={<AdminLoginPage />} />

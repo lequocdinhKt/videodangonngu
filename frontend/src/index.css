@@ -76,6 +76,11 @@ button { cursor: pointer; }
 .language-chips span { padding:5px 8px; color:#475569; background:#f1f5f9; border-radius:999px; font-size:11px; font-weight:700; }
 .state-card { min-height:180px; display:grid; place-items:center; align-content:center; gap:12px; margin-bottom:24px; padding:32px; text-align:center; color:#64748b; background:#fff; border:1px solid #e2e8f0; border-radius:18px; }
 .state-card p { margin:0; max-width:600px; }.error-state strong { color:#b91c1c; }
+.state-card.warning-state { background:#fffaf0; border-color:#f3dcae; }
+.state-card.warning-state strong { color:#92400e; }
+.state-card-message { display:grid; justify-items:center; gap:12px; }
+.state-card-actions { display:flex; flex-wrap:wrap; justify-content:center; gap:10px; }
+.state-card-actions .secondary-button { min-height:44px; display:inline-flex; align-items:center; }
 .spinner { width:28px; height:28px; border:3px solid #dbeafe; border-top-color:#2563eb; border-radius:50%; animation:spin .8s linear infinite; }
 @keyframes spin { to { transform:rotate(360deg); } }
 .site-footer { display:flex; justify-content:space-between; gap:12px; margin-top:52px; padding-top:22px; color:#94a3b8; border-top:1px solid #e2e8f0; font-size:12px; }
