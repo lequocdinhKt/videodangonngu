@@ -12,6 +12,11 @@ export interface HeritageChapter {
   menuLabel: LocalizedText
   title: LocalizedText
   description: LocalizedText
+  overview: {
+    eyebrow: LocalizedText
+    intro: LocalizedText
+    resultLabel: LocalizedText
+  }
   thumbnail: string
 }
 
@@ -101,49 +106,12 @@ export const PROJECT_INTRO: Record<LanguageCode, string[]> = {
   ],
 }
 
-export const DECODE_COPY: Record<LanguageCode, {
-  eyebrow: string
-  title: string
-  question: string
-  hint: string
-  result: string
-}> = {
-  'vi-VN': {
-    eyebrow: 'CHUYÊN ĐỀ · GIẢI MÃ DI SẢN',
-    title: 'Giải mã ma nhai',
-    question: 'Bạn đang tò mò về câu chuyện của bia ma nhai nào tại Ngũ Hành Sơn?',
-    hint: '',
-    result: 'Video phân tích',
-  },
-  'en-US': {
-    eyebrow: 'FEATURE · DECODING HERITAGE',
-    title: 'Decoding Ma Nhai',
-    question: 'What do the inscriptions reveal about the history and cultural exchange of the Marble Mountains?',
-    hint: 'Choose a video to explore the story, chronology and layers of meaning preserved in each inscription.',
-    result: 'Analysis video',
-  },
-  'ru-RU': {
-    eyebrow: 'СПЕЦТЕМА · РАСШИФРОВКА НАСЛЕДИЯ',
-    title: 'Расшифровка Ма-Няй',
-    question: 'Что каменные надписи рассказывают об истории и культурных связях Мраморных гор?',
-    hint: 'Выберите видео, чтобы узнать историю, датировку и смысл каждого памятника.',
-    result: 'Видеоразбор',
-  },
-  'zh-CN': {
-    eyebrow: '专题 · 解码文化遗产',
-    title: '解码摩崖石刻',
-    question: '石刻文字如何讲述五行山的历史与文化交流？',
-    hint: '选择视频，深入了解每方碑刻所保存的故事、年代与文化内涵。',
-    result: '解析视频',
-  },
-}
-
 export const HERITAGE_CHAPTERS: HeritageChapter[] = [
   {
     number: '01',
     slug: 'tong-quan-ma-nhai-ngu-hanh-son',
     slotKey: 'chapter-1',
-    route: '/videos/tong-quan-ma-nhai-ngu-hanh-son',
+    route: '/tong-quan-ma-nhai-ngu-hanh-son',
     menuLabel: {
       'vi-VN': 'Tổng quan Ma nhai Ngũ Hành Sơn',
       'en-US': 'Overview of Ma Nhai inscriptions',
@@ -161,6 +129,26 @@ export const HERITAGE_CHAPTERS: HeritageChapter[] = [
       'en-US': 'An introduction to the historic inscriptions preserved on the cliffs and inside the caves of the Marble Mountains.',
       'ru-RU': 'Знакомство с историческими надписями, сохранившимися на скалах и в пещерах Мраморных гор.',
       'zh-CN': '整体介绍五行山峭壁与洞窟中保存至今的历史石刻。',
+    },
+    overview: {
+      eyebrow: {
+        'vi-VN': 'Nội dung 01',
+        'en-US': 'Chapter 01',
+        'ru-RU': 'Раздел 01',
+        'zh-CN': '内容 01',
+      },
+      intro: {
+        'vi-VN': 'Bạn muốn hiểu điều gì ẩn sau hệ thống văn tự cổ trên vách đá Ngũ Hành Sơn?',
+        'en-US': 'What lies behind the inscriptions carved into the cliffs of the Marble Mountains?',
+        'ru-RU': 'Что скрывается за надписями, высеченными на скалах Мраморных гор?',
+        'zh-CN': '五行山峭壁上的石刻，承载着怎样的故事？',
+      },
+      resultLabel: {
+        'vi-VN': 'Video tổng quan',
+        'en-US': 'Overview video',
+        'ru-RU': 'Обзорное видео',
+        'zh-CN': '概览视频',
+      },
     },
     thumbnail: overviewThumbnail,
   },
@@ -186,6 +174,26 @@ export const HERITAGE_CHAPTERS: HeritageChapter[] = [
       'en-US': 'A closer look at a remarkable inscription and the story of cultural exchange it has carried for nearly four centuries.',
       'ru-RU': 'Подробный рассказ о выдающейся надписи и истории культурного обмена, сохраненной почти четыре столетия.',
       'zh-CN': '深入了解一方代表性摩崖碑刻，以及它近四百年来所承载的文化交流故事。',
+    },
+    overview: {
+      eyebrow: {
+        'vi-VN': 'CHUYÊN ĐỀ · GIẢI MÃ DI SẢN',
+        'en-US': 'FEATURE · DECODING HERITAGE',
+        'ru-RU': 'СПЕЦТЕМА · РАСШИФРОВКА НАСЛЕДИЯ',
+        'zh-CN': '专题 · 解码文化遗产',
+      },
+      intro: {
+        'vi-VN': 'Bạn đang tò mò về câu chuyện của bia ma nhai nào tại Ngũ Hành Sơn?',
+        'en-US': 'What do the inscriptions reveal about the history and cultural exchange of the Marble Mountains?',
+        'ru-RU': 'Что каменные надписи рассказывают об истории и культурных связях Мраморных гор?',
+        'zh-CN': '石刻文字如何讲述五行山的历史与文化交流？',
+      },
+      resultLabel: {
+        'vi-VN': 'Video phân tích',
+        'en-US': 'Analysis video',
+        'ru-RU': 'Видеоразбор',
+        'zh-CN': '解析视频',
+      },
     },
     thumbnail: inscriptionThumbnail,
   },
